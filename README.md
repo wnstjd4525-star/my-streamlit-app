@@ -1,1 +1,1 @@
-# my-streamlit-app
+# app.py
