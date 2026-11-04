@@ -13,8 +13,8 @@ from config import get_setting, llm_model, stt_model, tts_model
 from prompts.system_prompts import CHAT_INSTRUCTIONS
 from services.meeting_service import analyze_meeting, build_meeting_report
 from services.task_service import STATUSES, make_briefing, personal_tasks, rank_tasks, with_ids
-from services.speech_service import transcribe_audio, make_speech
-from services.email_service import send_email, valid_recipient
+from services.speech_service import transcribe_audio, make_speech, SUPPORTED_AUDIO, MAX_AUDIO_BYTES
+from services.email_service import parse_recipients, send_emails
 
 st.set_page_config(page_title='에이블 | AI 업무비서', page_icon='🤖', layout='wide', initial_sidebar_state='expanded')
 ASSET_DIR = Path(__file__).resolve().parent / 'assets'
@@ -42,7 +42,8 @@ DEFAULTS = {
     'analysis': None, 'tasks': [], 'messages': [], 'pending_email': None,
     'brief_audio': None, 'brief_audio_for': None, 'last_chat_audio': None,
     'last_transcript': '', 'last_chat_reply': '', 'owner': '김 대리',
-    'auto_voice': False,
+    'auto_voice': False, 'last_chat_audio_for': None, 'email_results': [],
+    'meeting_transcript': '',
 }
 for key, value in DEFAULTS.items():
     if key not in st.session_state:
@@ -67,6 +68,8 @@ def reset_meeting():
     st.session_state.brief_audio = None
     st.session_state.brief_audio_for = None
     st.session_state.pending_email = None
+    st.session_state.meeting_transcript = ''
+    st.session_state.email_results = []
 
 
 def update_status(task_id):
@@ -129,6 +132,7 @@ with st.sidebar:
             st.session_state.last_transcript = ''
             st.session_state.last_chat_reply = ''
             st.session_state.last_chat_audio = None
+            st.session_state.last_chat_audio_for = None
             st.rerun()
         if st.button('회의/업무 데이터 초기화', use_container_width=True):
             reset_meeting()
@@ -153,6 +157,14 @@ if page == '회의 통합 분석':
             text_file = st.file_uploader('회의록 TXT', type=['txt'], key='meeting_txt', help='UTF-8 텍스트 파일')
         with c2:
             image_file = st.file_uploader('화이트보드 이미지 (최대 8MB)', type=['png','jpg','jpeg'], key='meeting_img')
+        recording_file = st.file_uploader(
+            '회의 녹음 파일 (선택 · MP3/M4A/WAV 등, 최대 24MB)',
+            type=['mp3', 'm4a', 'mp4', 'mpeg', 'mpga', 'wav', 'webm'],
+            key='meeting_audio',
+            help='업로드한 녹음을 STT로 전사한 뒤 회의록·화이트보드와 함께 분석합니다.'
+        )
+        if recording_file is not None:
+            st.caption(f'✓ 녹음 첨부: {recording_file.name} · {recording_file.size / 1024 / 1024:.1f}MB')
         # 화이트보드 미리보기는 제거했습니다. 파일명/형식 검증만 표시합니다.
         whiteboard_bytes, image_mime, image_error = None, None, None
         if image_file is not None:
@@ -174,25 +186,42 @@ if page == '회의 통합 분석':
 
         analyze_clicked = st.button('통합 분석 실행', type='primary', use_container_width=True)
     if analyze_clicked:
-        if text_file is None or image_file is None:
-            st.warning('회의록 TXT와 화이트보드 이미지를 모두 업로드해 주세요.')
-        elif image_error or whiteboard_bytes is None:
+        if text_file is None and image_file is None and recording_file is None:
+            st.warning('회의록 TXT, 화이트보드 이미지, 회의 녹음 중 하나 이상 업로드해 주세요.')
+        elif image_error:
             st.error('화이트보드 파일을 확인해 주세요.')
-        elif text_file.size > 1_000_000:
-            st.warning('회의록은 1MB 이하로 올려 주세요.')
+        elif text_file is not None and text_file.size > 1_000_000:
+            st.warning('회의록 TXT는 1MB 이하로 올려 주세요.')
+        elif recording_file is not None and recording_file.size > MAX_AUDIO_BYTES:
+            st.warning('회의 녹음 파일은 24MB 이하로 올려 주세요.')
         else:
             try:
-                meeting_text = text_file.getvalue().decode('utf-8-sig')
-                if not meeting_text.strip():
-                    raise ValueError('회의록 내용이 비어 있습니다.')
-                with st.spinner('두 자료를 통합 분석하고 담당 업무를 추출하는 중...'):
-                    analysis = analyze_meeting(client, llm_model(), meeting_text, whiteboard_bytes, image_mime)
+                meeting_text = text_file.getvalue().decode('utf-8-sig') if text_file is not None else ''
+                transcript_text = ''
+                if recording_file is not None:
+                    with st.spinner('회의 녹음 파일을 텍스트로 변환하고 있습니다...'):
+                        transcript_text = transcribe_audio(
+                            client, stt_model(), recording_file.getvalue(), recording_file.name
+                        )
+                combined_text = meeting_text.strip()
+                if transcript_text:
+                    combined_text += ('\n\n' if combined_text else '') + '[회의 녹음 전사]\n' + transcript_text
+                with st.spinner('회의 자료를 통합 분석하고 담당 업무를 추출하는 중...'):
+                    analysis = analyze_meeting(client, llm_model(), combined_text, whiteboard_bytes, image_mime)
                 reset_meeting()
                 st.session_state.analysis = analysis
                 st.session_state.tasks = with_ids(analysis.get('tasks', []))
+                st.session_state.meeting_transcript = transcript_text
                 st.success(f'분석 완료 · 추출 업무 {len(st.session_state.tasks)}건')
             except Exception as exc:
                 st.error(format_problem(exc))
+
+    if st.session_state.meeting_transcript:
+        with st.expander('🎙️ 회의 녹음 전사 결과 확인'):
+            st.caption('자동 음성 인식 결과에는 오류가 있을 수 있어 원본 녹음과 대조해 주세요.')
+            st.text(st.session_state.meeting_transcript)
+            st.download_button('전사 텍스트 다운로드', st.session_state.meeting_transcript,
+                               'meeting_transcript.txt', mime='text/plain')
 
     if st.session_state.analysis:
         info = st.session_state.analysis
@@ -216,7 +245,7 @@ if page == '회의 통합 분석':
         with st.expander('최종 회의록 텍스트 보기'):
             st.markdown(report)
     else:
-        st.caption('자료를 업로드하고 분석을 실행하면 회의 요약과 추출된 업무가 표시됩니다.')
+        st.caption('회의록·화이트보드·회의 녹음 중 하나 이상 올리고 분석을 실행하세요.')
 
 elif page == '담당 업무':
     if not st.session_state.analysis:
@@ -286,7 +315,7 @@ elif page == 'AI 비서 대화':
     if voice_submit and audio_input is not None:
         try:
             with st.spinner('음성 인식 중...'):
-                user_question = transcribe_audio(client, stt_model(), audio_input.getvalue())
+                user_question = transcribe_audio(client, stt_model(), audio_input.getvalue(), 'voice.wav')
             st.session_state.last_transcript = user_question
             st.info('인식된 질문: ' + (user_question or '음성을 인식하지 못했습니다.'))
         except Exception as exc:
@@ -298,6 +327,7 @@ elif page == 'AI 비서 대화':
             st.warning('질문은 최대 2,500자까지 입력할 수 있습니다.')
         else:
             st.session_state.last_chat_audio = None
+            st.session_state.last_chat_audio_for = None
             email_intent = ('메일' in question or '이메일' in question) and any(w in question for w in ('보내', '전송', '공유'))
             if email_intent:
                 if st.session_state.analysis:
@@ -338,24 +368,36 @@ elif page == 'AI 비서 대화':
                 try:
                     with st.spinner('답변 음성 생성 중...'):
                         st.session_state.last_chat_audio = make_speech(client, tts_model(), answer)
-                except Exception:
+                        st.session_state.last_chat_audio_for = answer
+                except Exception as exc:
                     st.session_state.last_chat_audio = None
-                    st.warning('텍스트 답변은 생성되었지만 음성을 만들지 못했습니다.')
+                    st.session_state.last_chat_audio_for = None
+                    st.warning('텍스트 답변은 생성했지만 음성 생성에 실패했습니다: ' + format_problem(exc))
             st.rerun()
     if st.session_state.last_chat_reply:
         with st.container(border=True):
-            st.markdown('**🔊 에이블 답변 듣기**')
-            play_reply = st.button('마지막 답변 음성으로 재생', use_container_width=True)
+            st.markdown('**🔊 에이블의 답변 음성으로 듣기**')
+            st.caption('재생 버튼을 누르면 MP3를 만들고 플레이어에 표시합니다. 브라우저가 자동 재생을 차단하면 ▶ 버튼을 눌러 주세요.')
+            play_reply = st.button('🔊 마지막 답변 음성 생성 / 재생', use_container_width=True)
             if play_reply:
                 try:
-                    with st.spinner('답변을 음성으로 변환하는 중...'):
-                        # 최근 답변에 대해 한 번만 생성해 중복 비용 방지
-                        if st.session_state.last_chat_audio is None:
-                            st.session_state.last_chat_audio = make_speech(client, tts_model(), st.session_state.last_chat_reply)
+                    with st.spinner('음성 답변을 생성하고 있습니다...'):
+                        if (st.session_state.last_chat_audio_for != st.session_state.last_chat_reply
+                                or not st.session_state.last_chat_audio):
+                            st.session_state.last_chat_audio = make_speech(
+                                client, tts_model(), st.session_state.last_chat_reply)
+                            st.session_state.last_chat_audio_for = st.session_state.last_chat_reply
                 except Exception as exc:
-                    st.error(format_problem(exc))
-            if st.session_state.last_chat_audio:
-                st.audio(st.session_state.last_chat_audio, format='audio/mp3', autoplay=(play_reply or st.session_state.auto_voice))
+                    st.session_state.last_chat_audio = None
+                    st.session_state.last_chat_audio_for = None
+                    st.error('TTS 생성 실패: ' + format_problem(exc))
+            if (st.session_state.last_chat_audio
+                    and st.session_state.last_chat_audio_for == st.session_state.last_chat_reply):
+                st.audio(st.session_state.last_chat_audio, format='audio/mp3', autoplay=play_reply)
+                st.download_button('MP3 음성 다운로드', st.session_state.last_chat_audio,
+                                   'aivle_reply.mp3', mime='audio/mpeg')
+            else:
+                st.caption('아직 생성된 음성 파일이 없습니다. 위 버튼을 눌러 주세요.')
 
 # 이메일은 AI와 독립적으로 처리하며 반드시 사용자 최종 확인이 있어야 발송합니다.
 st.divider()
@@ -369,26 +411,42 @@ with st.expander('✉️ 최종 회의록 / 업무 브리핑 이메일 공유', 
             brief = make_briefing(st.session_state.tasks, st.session_state.owner, today)
             content = {'최종 회의록': report, '오늘의 브리핑': brief, '둘 다': report + '\n\n---\n\n' + brief}[kind]
             st.session_state.pending_email = {'to': '', 'subject': f'[에이블] {kind}', 'body': content}
+            st.session_state.email_results = []
         if st.session_state.pending_email is not None:
             with st.form('email_confirm_form', clear_on_submit=False):
-                to = st.text_input('받는 사람 이메일', value=st.session_state.pending_email.get('to', ''))
+                to = st.text_area('받는 사람 이메일 주소 (여러 명 가능)',
+                                  value=st.session_state.pending_email.get('to', ''), height=100,
+                                  help='쉼표, 세미콜론 또는 줄바꿈으로 구분하세요. 최대 10개, 각각 개별 발송합니다.')
                 subject = st.text_input('제목', value=st.session_state.pending_email.get('subject', ''))
                 body = st.text_area('본문 (수정 가능)', value=st.session_state.pending_email.get('body', ''), height=220)
-                confirm = st.form_submit_button('이메일 발송 확인', type='primary')
+                confirm = st.form_submit_button('✅ 입력한 모든 수신자에게 발송 확인', type='primary')
             if confirm:
-                if not valid_recipient(to):
-                    st.error('받는 사람 이메일 주소를 확인해 주세요.')
-                elif not subject.strip() or not body.strip():
-                    st.error('제목과 본문을 입력해 주세요.')
-                else:
-                    st.session_state.pending_email = {'to': to, 'subject': subject, 'body': body}
-                    with st.spinner('Gmail 서버로 전송 중...'):
-                        result = send_email(to, subject, body)
-                    if result['status'] == 'success':
-                        st.session_state.pending_email = None
-                        st.success(result['message'])
+                st.session_state.pending_email = {'to': to, 'subject': subject, 'body': body}
+                try:
+                    recipients = parse_recipients(to)
+                    if not subject.strip() or not body.strip():
+                        raise ValueError('제목과 본문을 입력해 주세요.')
+                    with st.spinner(f'{len(recipients)}명에게 개별 이메일을 보내는 중...'):
+                        results = send_emails(recipients, subject, body)
+                    st.session_state.email_results = results
+                    success = [x for x in results if x['status'] == 'success']
+                    failed = [x for x in results if x['status'] != 'success']
+                    if success:
+                        st.success(f'Gmail 서버 접수: {len(success)}건 / {len(recipients)}건 (실제 배달은 수신 서버 상태에 따라 다를 수 있습니다)')
+                    if failed:
+                        st.error(f'발송 실패: {len(failed)}건. 아래 결과를 확인하고 실패 주소만 재시도하세요.')
                     else:
-                        st.error(result['error'])
+                        st.session_state.pending_email = None
+                except ValueError as exc:
+                    st.error(str(exc))
             if st.button('초안 취소'):
                 st.session_state.pending_email = None
+                st.session_state.email_results = []
                 st.rerun()
+    if st.session_state.email_results:
+        st.markdown('**수신자별 전송 결과**')
+        for item in st.session_state.email_results:
+            if item['status'] == 'success':
+                st.caption(f"✓ {item['to']} · Gmail 접수")
+            else:
+                st.warning(f"{item['to']} · {item['error']}")
