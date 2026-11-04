@@ -39,6 +39,8 @@ def send_email(to, subject, body):
     """1일차 미션에서 작성한 Gmail SMTP 전송 함수의 Streamlit 버전."""
     sender = get_setting("GMAIL_ADDRESS")
     password = get_setting("GMAIL_APP_PASSWORD")
+    if password:
+        password = "".join(password.split())  # Gmail 앱 비밀번호의 공백 제거
     if not sender or not password:
         return {"status": "failed", "error": "Gmail Secrets 정보가 없습니다."}
 
@@ -53,8 +55,10 @@ def send_email(to, subject, body):
             smtp.login(sender, password)
             smtp.sendmail(sender, [to], msg.as_string())
         return {"status": "success"}
-    except Exception as exc:
-        return {"status": "failed", "error": str(exc)}
+    except smtplib.SMTPAuthenticationError:
+        return {"status": "failed", "error": "Gmail 인증 실패: 앱 비밀번호와 계정 주소를 확인하세요."}
+    except (smtplib.SMTPException, OSError) as exc:
+        return {"status": "failed", "error": f"SMTP 연결 또는 전송 실패 ({type(exc).__name__})"}
 
 
 def text_to_speech(text):
@@ -87,28 +91,17 @@ sys_role = """
   실제 전송은 사용자의 확인 버튼 이후에만 일어납니다.
 """
 
-email_tools = [
-    {
-        "type": "function",
-        "name": "send_email",
-        "description": (
-            "사용자가 자신의 음성 요청에서 이메일 발송을 명시적으로 지시한 경우에만 "
-            "이메일 발송을 위한 제목과 본문 초안을 작성합니다. "
-            "도구 호출은 실제 발송이 아니며 사용자 확인이 별도로 필요합니다."
-        ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "to": {"type": "string", "description": "수신 이메일 주소"},
-                "subject": {"type": "string", "description": "이메일 제목"},
-                "body": {"type": "string", "description": "이메일 본문"},
-            },
-            "required": ["to", "subject", "body"],
-            "additionalProperties": False,
-        },
-        "strict": True,
-    }
-]
+# 이메일 발송 체크박스는 '초안 만들기' 의사 표시입니다.
+# 실제 Gmail 전송은 아래 미리보기의 확인 버튼에서만 이루어집니다.
+email_draft_schema = {
+    "type": "object",
+    "properties": {
+        "subject": {"type": "string"},
+        "body": {"type": "string"},
+    },
+    "required": ["subject", "body"],
+    "additionalProperties": False,
+}
 
 if "pending_email" not in st.session_state:
     st.session_state.pending_email = None
@@ -136,6 +129,12 @@ with st.sidebar:
     st.divider()
     st.markdown("**가능한 업무**")
     st.markdown("- 회의록 요약 및 담당 업무 정리\n- 음성 질문/답변\n- 이메일 초안 및 확인 후 발송\n- 최근 10개 질의응답 기억")
+    sender_ready = bool(get_setting("GMAIL_ADDRESS"))
+    password_ready = bool(get_setting("GMAIL_APP_PASSWORD"))
+    if sender_ready and password_ready:
+        st.success("Gmail 발송 설정이 등록되어 있습니다.")
+    else:
+        st.warning("Gmail 발송용 Secrets가 누락되어 있습니다.")
 
 st.subheader("📋 업무 요청")
 st.info("회의록을 첨부하고 음성으로 요청해 주세요. 메일 발송은 반드시 최종 확인 버튼을 눌러야 합니다.")
@@ -144,7 +143,7 @@ with st.form("task_form"):
     uploaded_file = st.file_uploader("📄 회의록 업로드", type=["txt"])
     audio_value = st.audio_input("🎤 무엇을 도와드릴까요?")
     st.divider()
-    email_requested = st.checkbox("📧 이메일 발송 기능 사용")
+    email_requested = st.checkbox("📧 이메일 초안 만들기 (발송은 별도 확인)")
     recipient_email = st.text_input(
         "받는 사람 이메일 주소",
         placeholder="example@gmail.com",
@@ -190,17 +189,11 @@ if submit:
     if not user_question:
         st.stop()
 
-    # 이메일 발송 의사는 사용자의 음성 명령에서만 판단한다.
-    # 이메일 옵션 체크만으로 전송을 지시한 것으로 간주하지 않는다.
+    # 체크박스를 선택하고 실행한 것은 초안 생성에 대한 명시적인 UI 요청이다.
+    # 실제 이메일 발송은 사용자의 별도 확인 버튼으로만 실행한다.
     email_instruction = ""
     if email_requested:
-        email_instruction = f"""
-[이메일 기능]
-사용자가 음성으로 이메일 전송을 직접 요청한 경우에만 send_email 도구를 호출하세요.
-그 외에는 도구를 호출하지 말고 질문에 답하세요.
-허용되는 수신자 주소: {recipient_email}
-도구 호출은 이메일 초안 생성만 의미하며 사용자 확인 전 실제 전송은 금지됩니다.
-"""
+        email_instruction = "\n사용자 음성 요청을 참고해 이메일용 제목과 본문을 작성하세요. 원문에 없는 사실은 만들지 마세요."
 
     # 최근 10개 질의응답(최대 20개 메시지)을 모델의 대화 맥락으로 제공한다.
     # 회의록은 현재 요청에만 포함하여 과거 파일 내용을 불필요하게 누적하지 않는다.
@@ -219,43 +212,47 @@ if submit:
     ]
 
     with st.spinner("에이블이 답변을 준비하고 있습니다..."):
-        request = {
-            "model": "gpt-4o-mini",
-            "input": input_messages,
-        }
         if email_requested:
-            request["tools"] = email_tools
-            request["tool_choice"] = "auto"
-        response = client.responses.create(**request)
-
-    tool_calls = [
-        item for item in response.output
-        if item.type == "function_call" and item.name == "send_email"
-    ]
-
-    if email_requested and tool_calls:
-        arguments = json.loads(tool_calls[0].arguments)
-        # 수신자는 모델이 제시한 값이 아닌 사용자 입력값으로 제한한다.
-        st.session_state.pending_email = {
-            "to": recipient_email,
-            "subject": arguments["subject"],
-            "body": arguments["body"],
-        }
-        st.success("이메일 초안이 준비되었습니다. 아래에서 확인한 뒤 발송해 주세요.")
-        history_answer = (
-            f"이메일 초안 준비: {arguments['subject']} "
-            "(실제 발송은 사용자 확인 전까지 진행되지 않음)"
-        )
-    else:
-        answer = response.output_text.strip()
-        history_answer = answer or "답변을 생성하지 못했습니다."
-        st.session_state.last_answer = history_answer
-        if answer:
-            try:
-                with st.spinner("음성 답변을 생성하고 있습니다..."):
-                    st.session_state.tts_audio = text_to_speech(answer)
-            except Exception:
-                st.warning("텍스트 답변은 생성했지만 음성 생성에는 실패했습니다.")
+            # 체크박스가 켜져 있으면 도구 호출 여부에 의존하지 않고 초안을 작성한다.
+            # 수신자는 LLM이 아닌 사용자 입력값으로 고정한다.
+            response = client.responses.create(
+                model="gpt-4o-mini",
+                input=input_messages + [
+                    {"role": "user", "content": (
+                        "위 요청과 참고 자료를 바탕으로 발송용 이메일 제목과 본문을 작성하세요. "
+                        "회의록이 없으면 요청에 따라 알맞은 내용을 작성하세요. "
+                        "실제 발송을 수행하지 말고 초안만 생성하세요."
+                    )}
+                ],
+                text={"format": {
+                    "type": "json_schema",
+                    "name": "email_draft",
+                    "schema": email_draft_schema,
+                    "strict": True,
+                }},
+            )
+            draft = json.loads(response.output_text)
+            st.session_state.pending_email = {
+                "to": recipient_email,
+                "subject": draft["subject"],
+                "body": draft["body"],
+            }
+            st.success("이메일 초안을 만들었습니다. 아래 내용을 확인하고 발송 버튼을 눌러 주세요.")
+            history_answer = f"이메일 초안 작성: {draft['subject']} (아직 발송하지 않음)"
+        else:
+            response = client.responses.create(
+                model="gpt-4o-mini",
+                input=input_messages,
+            )
+            answer = response.output_text.strip()
+            history_answer = answer or "답변을 생성하지 못했습니다."
+            st.session_state.last_answer = history_answer
+            if answer:
+                try:
+                    with st.spinner("음성 답변을 생성하고 있습니다..."):
+                        st.session_state.tts_audio = text_to_speech(answer)
+                except Exception:
+                    st.warning("텍스트 답변은 생성했지만 음성 생성에는 실패했습니다.")
 
     # 새로 완성된 사용자-비서 대화 한 쌍만 저장하고 최근 10개로 제한한다.
     st.session_state.messages.extend([
@@ -293,13 +290,13 @@ if st.session_state.pending_email is not None:
     col1, col2 = st.columns(2)
     with col1:
         if st.button("✅ 이메일 발송 확인", type="primary"):
-            # 재실행 시 동일한 초안으로 중복 발송되지 않도록 먼저 지운다.
-            st.session_state.pending_email = None
             with st.spinner("이메일 발송 중..."):
                 result = send_email(**email_data)
             if result["status"] == "success":
+                st.session_state.pending_email = None
                 st.success("이메일을 발송했습니다.")
             else:
+                # 실패 시 초안을 보존하여 Secrets 수정 후 재시도할 수 있도록 함.
                 st.error("발송 실패: " + result.get("error", "알 수 없는 오류"))
     with col2:
         if st.button("❌ 발송 취소"):
