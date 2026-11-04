@@ -1,5 +1,8 @@
 """에이블 AI 업무비서: 회의 분석 / 업무 대시보드 / 채팅 및 음성 / 이메일."""
 import json
+import io
+from pathlib import Path
+from PIL import Image, UnidentifiedImageError
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
@@ -14,8 +17,24 @@ from services.speech_service import transcribe_audio, make_speech
 from services.email_service import send_email, valid_recipient
 
 st.set_page_config(page_title='에이블 | AI 업무비서', page_icon='🤖', layout='wide')
-st.title('🤖 에이블 | AI 업무비서')
-st.caption('회의록 + 화이트보드 통합 분석 · 우선순위 · 오늘의 브리핑 · 음성 대화 · 이메일')
+ASSET_DIR = Path(__file__).resolve().parent / 'assets'
+MAIN_IMAGE = ASSET_DIR / 'assistant_main.png'
+SIDE_IMAGE = ASSET_DIR / 'assistant_side.png'
+
+
+def show_mascot(image_path, width):
+    """로컬 마스코트 이미지가 배포된 경우 표시한다."""
+    if image_path.is_file():
+        st.image(str(image_path), width=width)
+
+
+head_text, head_image = st.columns([3, 1], vertical_alignment='center')
+with head_text:
+    st.title('에이블 | AI 업무비서')
+    st.caption('회의록 + 화이트보드 통합 분석 · 우선순위 · 오늘의 브리핑 · 음성 대화 · 이메일')
+    st.write('회의 내용을 분석하고 오늘 해야 할 일을 정리하는 AI 개인비서입니다.')
+with head_image:
+    show_mascot(MAIN_IMAGE, width=220)
 
 # 세션별 상태: 다른 사용자의 데이터와 섞이지 않으며 페이지 재실행 시 유지됩니다.
 DEFAULTS = {
@@ -68,6 +87,7 @@ def format_problem(exc):
     return f'요청 처리에 실패했습니다 ({name}). 앱 로그를 확인하세요.'
 
 with st.sidebar:
+    show_mascot(SIDE_IMAGE, width=200)
     st.header('⚙️ 에이블 설정')
     st.text_input('담당자 이름', key='owner', help='회의록의 담당자 표기와 같게 입력하세요. 예: 김 대리')
     st.caption(f'분석 기준일: {today.isoformat()} (한국 시간)')
@@ -97,19 +117,46 @@ with tab_meeting:
         text_file = st.file_uploader('회의록 (.txt)', type=['txt'], key='meeting_txt')
     with c2:
         image_file = st.file_uploader('화이트보드 (.png/.jpg)', type=['png', 'jpg', 'jpeg'], key='meeting_img')
-        if image_file is not None:
-            st.image(image_file, caption='화이트보드 미리보기', use_container_width=True)
+
+    # 업로드 객체를 직접 st.image()로 전달하지 않고 바이트로 한 번 읽어 재사용합니다.
+    # Streamlit 재실행/이미지 디코딩 후에도 AI 분석에 동일한 원본 바이트를 전달합니다.
+    whiteboard_bytes = None
+    image_mime = None
+    image_error = None
+    if image_file is not None:
+        try:
+            raw_bytes = image_file.getvalue()
+            if len(raw_bytes) > 8_000_000:
+                raise ValueError('이미지는 8MB 이하여야 합니다.')
+            with Image.open(io.BytesIO(raw_bytes)) as opened_image:
+                actual_format = opened_image.format
+                if actual_format not in ('PNG', 'JPEG'):
+                    raise ValueError('PNG 또는 JPG 이미지만 사용할 수 있습니다.')
+                opened_image.verify()
+            # 미리보기는 원본 바이트를 독립된 BytesIO 객체로 디코딩합니다.
+            with Image.open(io.BytesIO(raw_bytes)) as opened_image:
+                preview = opened_image.convert('RGB')
+            image_mime = 'image/png' if actual_format == 'PNG' else 'image/jpeg'
+            whiteboard_bytes = raw_bytes
+            with c2:
+                st.image(preview, caption=f'화이트보드 미리보기 · {image_file.name}', use_container_width=True)
+        except (UnidentifiedImageError, OSError, ValueError) as exc:
+            image_error = str(exc)
+            with c2:
+                st.error('화이트보드 미리보기를 표시할 수 없습니다. PNG/JPG 파일인지 확인하세요.')
+
     if st.button('🔍 통합 분석 및 업무 추출', type='primary', use_container_width=True):
-        if not text_file or not image_file:
+        if not text_file or image_file is None:
             st.warning('회의록 TXT와 화이트보드 이미지 두 파일을 모두 업로드해 주세요.')
-        elif text_file.size > 1_000_000 or image_file.size > 8_000_000:
-            st.warning('파일이 너무 큽니다. TXT는 1MB, 이미지는 8MB 이하로 올려 주세요.')
+        elif image_error is not None or whiteboard_bytes is None:
+            st.error('화이트보드 이미지가 유효하지 않아 분석할 수 없습니다.')
+        elif text_file.size > 1_000_000:
+            st.warning('회의록 TXT는 1MB 이하로 올려 주세요.')
         else:
             try:
                 meeting_text = text_file.getvalue().decode('utf-8-sig')
-                mime = 'image/png' if image_file.type == 'image/png' else 'image/jpeg'
                 with st.spinner('두 자료를 교차 분석하고 담당 업무를 추출하고 있습니다...'):
-                    analysis = analyze_meeting(client, llm_model(), meeting_text, image_file.getvalue(), mime)
+                    analysis = analyze_meeting(client, llm_model(), meeting_text, whiteboard_bytes, image_mime)
                 reset_meeting()
                 st.session_state.analysis = analysis
                 st.session_state.tasks = with_ids(analysis.get('tasks', []))
