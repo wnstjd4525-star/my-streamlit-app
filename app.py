@@ -148,7 +148,7 @@ with st.form("task_form"):
     recipient_email = st.text_input(
         "받는 사람 이메일 주소",
         placeholder="example@gmail.com",
-        disabled=not email_requested,
+        help="이메일 발송 옵션을 선택한 경우에만 주소를 사용합니다.",
     )
     submit = st.form_submit_button("실행", type="primary")
 
