@@ -18,6 +18,7 @@ from services.task_service import STATUSES, make_briefing, personal_tasks, rank_
 from services.speech_service import transcribe_audio, make_speech, SUPPORTED_AUDIO, MAX_AUDIO_BYTES
 from services.email_service import parse_recipients, send_emails
 from services.history_service import make_record, export_backup, import_backup, upsert_record
+from services.calendar_service import save_event, deadline_entries, entries_for_day, month_html
 
 st.set_page_config(page_title='에이블 | AI 업무비서', page_icon='🤖', layout='wide', initial_sidebar_state='expanded')
 ASSET_DIR = Path(__file__).resolve().parent / 'assets'
@@ -47,6 +48,7 @@ DEFAULTS = {
     'last_transcript': '', 'last_chat_reply': '', 'owner': '김 대리',
     'auto_voice': False, 'last_chat_audio_for': None, 'email_results': [],
     'meeting_transcript': '', 'meeting_archive': [], 'active_meeting_id': None,
+    'calendar_events': [], 'calendar_selected': None, 'calendar_offset': 0,
 }
 for key, value in DEFAULTS.items():
     if key not in st.session_state:
@@ -120,10 +122,11 @@ with st.sidebar:
     st.divider()
     page = st.radio(
         '메뉴',
-        ['회의 통합 분석', '회의 기록', '담당 업무', '업무 브리핑', 'AI 비서 대화'],
+        ['회의 통합 분석', '회의 기록', '캘린더', '담당 업무', '업무 브리핑', 'AI 비서 대화'],
         format_func=lambda name: {
             '회의 통합 분석': '◈  회의 통합 분석',
             '회의 기록': '▤  회의 기록',
+            '캘린더': '▦  캘린더',
             '담당 업무': '☷  담당 업무',
             '업무 브리핑': '▦  업무 브리핑',
             'AI 비서 대화': '◯  AI 비서 대화',
@@ -150,12 +153,13 @@ with st.sidebar:
         if st.button('회의/업무 데이터 초기화', use_container_width=True):
             reset_meeting()
             st.rerun()
-    st.caption('회의 기록은 세션에 저장됩니다. 영구 보관은 [회의 기록] 메뉴에서 JSON으로 백업해 주세요.')
+    st.caption('회의·일정은 현재 세션에 저장됩니다. 영구 보관은 [회의 기록]에서 JSON 백업을 사용하세요.')
 
 # 메인 영역은 선택된 페이지 하나만 표시합니다.
 page_kicker = {
     '회의 통합 분석': 'AI 개인비서 AIVLE',
     '회의 기록': 'MEETING ARCHIVE',
+    '캘린더': 'CALENDAR',
     '담당 업무': '업무 대시보드',
     '업무 브리핑': 'DAILY BRIEFING',
     'AI 비서 대화': 'AI ASSISTANT',
@@ -279,19 +283,20 @@ if page == '회의 통합 분석':
 elif page == '회의 기록':
     st.caption('분석 완료한 회의록을 다시 열거나, JSON으로 백업하고 다른 세션에서 복원할 수 있습니다.')
     st.info('현재 보관함은 브라우저 세션에만 유지됩니다. 중요한 회의는 꼭 백업 파일을 다운로드하세요. 원본 음성·사진은 보관하지 않습니다.')
-    backup_json = export_backup(st.session_state.meeting_archive, st.session_state.messages)
-    st.download_button('⬇️ 회의 기록 + 최근 대화 JSON 백업', backup_json,
+    backup_json = export_backup(st.session_state.meeting_archive, st.session_state.messages, st.session_state.calendar_events)
+    st.download_button('⬇️ 회의·일정·최근 대화 JSON 백업', backup_json,
                        file_name=f'aivle_meeting_backup_{today.isoformat()}.json',
                        mime='application/json', use_container_width=True)
     with st.expander('📥 이전 백업 복원'):
         restore_file = st.file_uploader('에이블 백업 JSON 파일 선택', type=['json'], key='history_restore_file')
         if st.button('백업 불러오기', disabled=restore_file is None):
             try:
-                archive, messages = import_backup(restore_file.getvalue())
+                archive, messages, events = import_backup(restore_file.getvalue(), include_events=True)
                 st.session_state.meeting_archive = archive
                 st.session_state.messages = messages
+                st.session_state.calendar_events = events
                 reset_meeting()
-                st.success(f'회의 {len(archive)}건과 대화 {len(messages)//2}개를 불러왔습니다.')
+                st.success(f'회의 {len(archive)}건, 일정 {len(events)}건, 대화 {len(messages)//2}개를 불러왔습니다.')
                 st.rerun()
             except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
                 st.error('백업을 불러올 수 없습니다: ' + str(exc)[:150])
@@ -331,6 +336,105 @@ elif page == '회의 기록':
                         st.text(record['transcript'])
     else:
         st.caption('아직 저장된 회의가 없습니다. [회의 통합 분석]에서 자료를 분석하면 자동으로 이곳에 쌓입니다.')
+
+elif page == '캘린더':
+    from datetime import date as calendar_date
+    import calendar as calendar_lib
+
+    st.caption('회의에서 추출된 업무 마감일과 직접 등록한 일정을 한눈에 확인합니다. Google Calendar와는 연결되지 않습니다.')
+    deadlines = deadline_entries(
+        st.session_state.meeting_archive,
+        st.session_state.analysis,
+        st.session_state.tasks,
+        st.session_state.active_meeting_id,
+    )
+    events = st.session_state.calendar_events
+    base = today.year * 12 + today.month - 1 + st.session_state.calendar_offset
+    year, zero_month = divmod(base, 12)
+    month = zero_month + 1
+    left, center, right = st.columns([1, 4, 1], vertical_alignment='center')
+    with left:
+        if st.button('◀ 이전', key='cal_prev', use_container_width=True):
+            st.session_state.calendar_offset -= 1
+            st.rerun()
+    with center:
+        st.markdown(f'<h3 style="text-align:center; margin:0">{year}년 {month}월</h3>', unsafe_allow_html=True)
+    with right:
+        if st.button('다음 ▶', key='cal_next', use_container_width=True):
+            st.session_state.calendar_offset += 1
+            st.rerun()
+    st.markdown("""<style>
+    .aivle-calendar table{width:100%;border-collapse:separate;border-spacing:4px;table-layout:fixed}
+    .aivle-calendar th{font-size:.8rem;color:#a9b2be;text-align:center;padding:6px}
+    .aivle-calendar td{height:90px;vertical-align:top;padding:9px;border:1px solid #2d343a;border-radius:9px;background:#15191d}
+    .aivle-calendar td.other{opacity:.3}
+    .aivle-calendar td.today{border:2px solid #13bdb3;background:#142a2a}
+    .aivle-calendar .day-number{font-weight:650;margin-bottom:8px}
+    .aivle-calendar .event-dot,.aivle-calendar .task-dot{display:block;font-size:.69rem;margin-top:3px;overflow:hidden;white-space:nowrap}
+    .aivle-calendar .event-dot{color:#60c5ee}.aivle-calendar .task-dot{color:#e8c37b}
+    </style>""", unsafe_allow_html=True)
+    st.markdown(month_html(year, month, events, deadlines, today), unsafe_allow_html=True)
+    st.caption('파란색: 직접 등록 일정 · 노란색: 미완료 업무 마감 · 날짜별 상세는 아래에서 선택')
+    chosen = st.date_input('확인할 날짜', value=today, key='cal_day_select')
+    day_entries = entries_for_day(events, deadlines, chosen)
+    st.subheader(f'{chosen.isoformat()} 일정 ({len(day_entries)}건)')
+    if not day_entries:
+        st.info('선택한 날짜에 일정이 없습니다.')
+    for entry in day_entries:
+        if entry['kind'] == 'deadline':
+            with st.container(border=True):
+                st.markdown(f"**📌 {entry['title']}** · {entry.get('status','미시작')}")
+                st.caption(f"회의: {entry.get('meeting','')} · 담당: {entry.get('owner','')}")
+        else:
+            with st.container(border=True):
+                st.markdown(f"**🗓️ {entry.get('time','') or '종일'} · {entry['title']}**")
+                if entry.get('note'):
+                    st.caption(entry['note'])
+    with st.expander('➕ 새 일정 추가', expanded=False):
+        with st.form('calendar_add_form', clear_on_submit=True):
+            add_title = st.text_input('일정 제목', max_chars=120)
+            add_day = st.date_input('일정 날짜', value=chosen)
+            add_timed = st.checkbox('시간 지정', value=False)
+            add_time = st.time_input('시작 시간', value=datetime.now(ZoneInfo('Asia/Seoul')).time())
+            add_note = st.text_area('메모 (선택)', max_chars=2000)
+            add_submit = st.form_submit_button('일정 저장', type='primary')
+        if add_submit:
+            try:
+                st.session_state.calendar_events = save_event(
+                    st.session_state.calendar_events,
+                    {'title':add_title,'date':add_day.isoformat(),
+                     'time':add_time.strftime('%H:%M') if add_timed else '', 'note':add_note}
+                )
+                st.success('일정이 등록되었습니다.')
+                st.rerun()
+            except ValueError as exc:
+                st.error(str(exc))
+    if events:
+        with st.expander('✏️ 일정 수정·삭제'):
+            chosen_id = st.selectbox('편집할 일정', options=[e['id'] for e in events],
+                format_func=lambda key: next(f"{e['date']} · {e['title']}" for e in events if e['id']==key))
+            selected_event = next(e for e in events if e['id'] == chosen_id)
+            with st.form(f'calendar_edit_{chosen_id}'):
+                edit_title = st.text_input('제목', value=selected_event['title'], max_chars=120)
+                edit_day = st.date_input('날짜', value=calendar_date.fromisoformat(selected_event['date']))
+                edit_time = st.text_input('시간 (HH:MM 또는 빈칸)', value=selected_event.get('time',''))
+                edit_note = st.text_area('메모', value=selected_event.get('note',''), max_chars=2000)
+                edit_save = st.form_submit_button('수정 저장', type='primary')
+                edit_delete = st.form_submit_button('일정 삭제')
+            if edit_save:
+                try:
+                    st.session_state.calendar_events = save_event(events,
+                        {'id':chosen_id,'title':edit_title,'date':edit_day.isoformat(),
+                         'time':edit_time.strip(),'note':edit_note})
+                    st.success('일정을 수정했습니다.')
+                    st.rerun()
+                except ValueError as exc:
+                    st.error(str(exc))
+            if edit_delete:
+                st.session_state.calendar_events = [e for e in events if e['id'] != chosen_id]
+                st.success('일정을 삭제했습니다.')
+                st.rerun()
+    st.caption('직접 등록 일정은 세션에서만 유지됩니다. 회의 기록 메뉴의 JSON 백업에 일정도 함께 포함됩니다.')
 
 elif page == '담당 업무':
     if not st.session_state.analysis:
@@ -426,7 +530,7 @@ elif page == 'AI 비서 대화':
                     answer = '회의 분석을 먼저 진행한 후 이메일을 준비할 수 있습니다.'
             else:
                 try:
-                    context = ''
+                    context = json.dumps({'calendar_events': st.session_state.calendar_events[:60]}, ensure_ascii=False)
                     if st.session_state.analysis:
                         context = json.dumps({
                             'summary': st.session_state.analysis.get('summary'),
@@ -434,6 +538,7 @@ elif page == 'AI 비서 대화':
                             'pending': st.session_state.analysis.get('pending'),
                             'conflicts': st.session_state.analysis.get('conflicts'),
                             'my_tasks': personal_tasks(rank_tasks(st.session_state.tasks, today), st.session_state.owner),
+                            'calendar_events': st.session_state.calendar_events[:60],
                         }, ensure_ascii=False)[:14000]
                     with st.spinner('답변 생성 중...'):
                         response = client.responses.create(

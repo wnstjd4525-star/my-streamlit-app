@@ -10,7 +10,8 @@
 - `services/task_service.py`: 업무 순위, 완료 상태 및 브리핑
 - `services/speech_service.py`: STT/TTS
 - `services/email_service.py`: Gmail SMTP 발송
-- `services/history_service.py`: 회의 기록 백업·복원 및 보관함 스키마 검증
+- `services/history_service.py`: 회의·일정·대화 JSON 백업 및 복원
+- `services/calendar_service.py`: 월간 달력, 수동 일정 등록·수정·삭제, 업무 마감일 통합
 - `prompts/system_prompts.py`: AI 지시문
 - `tests/test_task_service.py`: 순수 Python 점수 로직 테스트
 
@@ -58,3 +59,11 @@ TXT에 포함된 악성 지시문은 시스템 명령이 아닌 자료로 취급
 - `project03/assistant_main.png`, `project03/assistant_side.png`를 Colab의 이미지 준비 셀이 `assets/`로 복사합니다.
 - `assets/` 폴더를 GitHub에 함께 올려야 배포된 앱에서도 로봇 이미지가 나타납니다.
 - 화이트보드 업로드 시 `getvalue()`로 원본을 한 번 읽고 Pillow로 미리보기·검증 후 동일 바이트를 이미지 분석 요청에 전달합니다.
+
+## 캘린더 기능
+- 사이드바 **캘린더**에서 월간 달력으로 수동 일정(파란색)과 회의에서 추출된 업무 마감(노란색)을 확인합니다.
+- **새 일정 추가**에서 날짜, 제목, 선택적 시간/메모를 등록하고, **일정 수정·삭제**에서 변경할 수 있습니다.
+- 회의 기록으로 저장된 모든 회의의 마감일을 달력에 표시하고, 동일한 활성 회의는 중복 표시하지 않습니다.
+- 직접 등록 일정은 최대 200건까지 현재 세션에 유지됩니다.
+- **회의 기록 → JSON 백업/복원**에 직접 등록 일정도 포함되며, 기존 버전의 일정이 없는 백업도 복원할 수 있습니다.
+- Google Calendar와 자동 동기화되지는 않으며, 알림 푸시/영구 서버 저장도 아직 제공하지 않습니다.

@@ -35,13 +35,14 @@ def upsert_record(records, record, preserve_created=False):
     return records[-MAX_RECORDS:]
 
 
-def export_backup(records, messages):
+def export_backup(records, messages, events=None):
     payload = {'format': 'aivle_meeting_archive', 'version': 1,
-               'records': records[-MAX_RECORDS:], 'messages': messages[-20:]}
+               'records': records[-MAX_RECORDS:], 'messages': messages[-20:],
+               'calendar_events': (events or [])[:200]}
     return json.dumps(payload, ensure_ascii=False, indent=2)
 
 
-def import_backup(data):
+def import_backup(data, include_events=False):
     if not isinstance(data, bytes) or not data or len(data) > MAX_IMPORT_BYTES:
         raise ValueError('4MB 이하의 유효한 JSON 백업을 선택해 주세요.')
     payload = json.loads(data.decode('utf-8-sig'))
@@ -67,4 +68,13 @@ def import_backup(data):
         if not isinstance(message, dict) or message.get('role') not in ('user','assistant') or not isinstance(message.get('content'), str):
             raise ValueError('대화 기록 형식이 올바르지 않습니다.')
         clean_messages.append({'role': message['role'], 'content': message['content'][:10000]})
+    from services.calendar_service import validate_event
+    event_items = payload.get('calendar_events', [])
+    if not isinstance(event_items, list) or len(event_items) > 200:
+        raise ValueError('일정 기록 건수가 허용 범위를 초과했습니다.')
+    clean_events = [validate_event(event) for event in event_items]
+    if len({x['id'] for x in clean_events}) != len(clean_events):
+        raise ValueError('중복된 일정 ID가 있습니다.')
+    if include_events:
+        return clean_records, clean_messages, clean_events
     return clean_records, clean_messages
