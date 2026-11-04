@@ -1,8 +1,10 @@
 """에이블: 깔끔한 사이드바 메뉴 UI + 멀티모달 분석 + TTS."""
 import io
+import copy
 import json
 from datetime import datetime
 from pathlib import Path
+from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 import streamlit as st
@@ -15,6 +17,7 @@ from services.meeting_service import analyze_meeting, build_meeting_report
 from services.task_service import STATUSES, make_briefing, personal_tasks, rank_tasks, with_ids
 from services.speech_service import transcribe_audio, make_speech, SUPPORTED_AUDIO, MAX_AUDIO_BYTES
 from services.email_service import parse_recipients, send_emails
+from services.history_service import make_record, export_backup, import_backup, upsert_record
 
 st.set_page_config(page_title='에이블 | AI 업무비서', page_icon='🤖', layout='wide', initial_sidebar_state='expanded')
 ASSET_DIR = Path(__file__).resolve().parent / 'assets'
@@ -43,7 +46,7 @@ DEFAULTS = {
     'brief_audio': None, 'brief_audio_for': None, 'last_chat_audio': None,
     'last_transcript': '', 'last_chat_reply': '', 'owner': '김 대리',
     'auto_voice': False, 'last_chat_audio_for': None, 'email_results': [],
-    'meeting_transcript': '',
+    'meeting_transcript': '', 'meeting_archive': [], 'active_meeting_id': None,
 }
 for key, value in DEFAULTS.items():
     if key not in st.session_state:
@@ -70,6 +73,7 @@ def reset_meeting():
     st.session_state.pending_email = None
     st.session_state.meeting_transcript = ''
     st.session_state.email_results = []
+    st.session_state.active_meeting_id = None
 
 
 def update_status(task_id):
@@ -79,6 +83,14 @@ def update_status(task_id):
             break
     st.session_state.brief_audio = None
     st.session_state.brief_audio_for = None
+    if st.session_state.active_meeting_id and st.session_state.analysis:
+        st.session_state.meeting_archive = upsert_record(
+            st.session_state.meeting_archive, make_record(
+                st.session_state.analysis, st.session_state.tasks,
+                st.session_state.meeting_transcript,
+                record_id=st.session_state.active_meeting_id,
+            ), preserve_created=True
+        )
 
 
 def format_problem(exc):
@@ -108,9 +120,10 @@ with st.sidebar:
     st.divider()
     page = st.radio(
         '메뉴',
-        ['회의 통합 분석', '담당 업무', '업무 브리핑', 'AI 비서 대화'],
+        ['회의 통합 분석', '회의 기록', '담당 업무', '업무 브리핑', 'AI 비서 대화'],
         format_func=lambda name: {
             '회의 통합 분석': '◈  회의 통합 분석',
+            '회의 기록': '▤  회의 기록',
             '담당 업무': '☷  담당 업무',
             '업무 브리핑': '▦  업무 브리핑',
             'AI 비서 대화': '◯  AI 비서 대화',
@@ -119,7 +132,7 @@ with st.sidebar:
         key='page_navigation',
     )
     st.divider()
-    st.caption(f'미완료 업무 {sum(t.get("status") != "완료" for t in st.session_state.tasks)}건')
+    st.caption(f'미완료 업무 {sum(t.get("status") != "완료" for t in st.session_state.tasks)}건 · 저장된 회의 {len(st.session_state.meeting_archive)}건')
     with st.expander('⚙️ 설정', expanded=False):
         st.text_input('담당자 이름', key='owner', help='회의록의 담당자 표기와 같게 입력하세요.')
         st.caption(f'기준일 {today.isoformat()} · 한국 시간')
@@ -137,11 +150,12 @@ with st.sidebar:
         if st.button('회의/업무 데이터 초기화', use_container_width=True):
             reset_meeting()
             st.rerun()
-    st.caption('대화·업무 데이터는 현재 세션에 보관됩니다.')
+    st.caption('회의 기록은 세션에 저장됩니다. 영구 보관은 [회의 기록] 메뉴에서 JSON으로 백업해 주세요.')
 
 # 메인 영역은 선택된 페이지 하나만 표시합니다.
 page_kicker = {
     '회의 통합 분석': 'AI 개인비서 AIVLE',
+    '회의 기록': 'MEETING ARCHIVE',
     '담당 업무': '업무 대시보드',
     '업무 브리핑': 'DAILY BRIEFING',
     'AI 비서 대화': 'AI ASSISTANT',
@@ -163,8 +177,19 @@ if page == '회의 통합 분석':
             key='meeting_audio',
             help='업로드한 녹음을 STT로 전사한 뒤 회의록·화이트보드와 함께 분석합니다.'
         )
+        st.markdown('**🎙️ 회의 중 바로 녹음하기**')
+        live_recording = st.audio_input('마이크로 회의 녹음 (녹음 종료 후 분석 가능)', key='live_meeting_audio')
+        st.caption('브라우저의 마이크 권한이 필요합니다. 녹음이 끝나면 통합 분석 실행을 눌러 주세요. 긴 회의는 파일 녹음 후 업로드를 권장합니다.')
+        if live_recording is not None:
+            st.success(f'마이크 녹음 준비됨 · {len(live_recording.getvalue())/1024/1024:.1f}MB')
         if recording_file is not None:
-            st.caption(f'✓ 녹음 첨부: {recording_file.name} · {recording_file.size / 1024 / 1024:.1f}MB')
+            st.caption(f'✓ 녹음 파일 첨부: {recording_file.name} · {recording_file.size / 1024 / 1024:.1f}MB')
+        audio_source = None
+        if live_recording is not None and recording_file is not None:
+            choice = st.radio('분석할 음성 선택', ['직접 녹음', '업로드 파일'], horizontal=True)
+            audio_source = live_recording if choice == '직접 녹음' else recording_file
+        else:
+            audio_source = live_recording if live_recording is not None else recording_file
         # 화이트보드 미리보기는 제거했습니다. 파일명/형식 검증만 표시합니다.
         whiteboard_bytes, image_mime, image_error = None, None, None
         if image_file is not None:
@@ -186,22 +211,23 @@ if page == '회의 통합 분석':
 
         analyze_clicked = st.button('통합 분석 실행', type='primary', use_container_width=True)
     if analyze_clicked:
-        if text_file is None and image_file is None and recording_file is None:
+        if text_file is None and image_file is None and audio_source is None:
             st.warning('회의록 TXT, 화이트보드 이미지, 회의 녹음 중 하나 이상 업로드해 주세요.')
         elif image_error:
             st.error('화이트보드 파일을 확인해 주세요.')
         elif text_file is not None and text_file.size > 1_000_000:
             st.warning('회의록 TXT는 1MB 이하로 올려 주세요.')
-        elif recording_file is not None and recording_file.size > MAX_AUDIO_BYTES:
+        elif audio_source is not None and len(audio_source.getvalue()) > MAX_AUDIO_BYTES:
             st.warning('회의 녹음 파일은 24MB 이하로 올려 주세요.')
         else:
             try:
                 meeting_text = text_file.getvalue().decode('utf-8-sig') if text_file is not None else ''
                 transcript_text = ''
-                if recording_file is not None:
-                    with st.spinner('회의 녹음 파일을 텍스트로 변환하고 있습니다...'):
+                if audio_source is not None:
+                    with st.spinner('회의 음성을 텍스트로 변환하고 있습니다...'):
                         transcript_text = transcribe_audio(
-                            client, stt_model(), recording_file.getvalue(), recording_file.name
+                            client, stt_model(), audio_source.getvalue(),
+                            'meeting_recording.wav' if audio_source is live_recording else audio_source.name
                         )
                 combined_text = meeting_text.strip()
                 if transcript_text:
@@ -212,7 +238,10 @@ if page == '회의 통합 분석':
                 st.session_state.analysis = analysis
                 st.session_state.tasks = with_ids(analysis.get('tasks', []))
                 st.session_state.meeting_transcript = transcript_text
-                st.success(f'분석 완료 · 추출 업무 {len(st.session_state.tasks)}건')
+                record = make_record(analysis, st.session_state.tasks, transcript_text)
+                st.session_state.meeting_archive = upsert_record(st.session_state.meeting_archive, record)
+                st.session_state.active_meeting_id = record['id']
+                st.success(f'분석 완료 · 추출 업무 {len(st.session_state.tasks)}건 · [회의 기록]에 보관됨')
             except Exception as exc:
                 st.error(format_problem(exc))
 
@@ -246,6 +275,62 @@ if page == '회의 통합 분석':
             st.markdown(report)
     else:
         st.caption('회의록·화이트보드·회의 녹음 중 하나 이상 올리고 분석을 실행하세요.')
+
+elif page == '회의 기록':
+    st.caption('분석 완료한 회의록을 다시 열거나, JSON으로 백업하고 다른 세션에서 복원할 수 있습니다.')
+    st.info('현재 보관함은 브라우저 세션에만 유지됩니다. 중요한 회의는 꼭 백업 파일을 다운로드하세요. 원본 음성·사진은 보관하지 않습니다.')
+    backup_json = export_backup(st.session_state.meeting_archive, st.session_state.messages)
+    st.download_button('⬇️ 회의 기록 + 최근 대화 JSON 백업', backup_json,
+                       file_name=f'aivle_meeting_backup_{today.isoformat()}.json',
+                       mime='application/json', use_container_width=True)
+    with st.expander('📥 이전 백업 복원'):
+        restore_file = st.file_uploader('에이블 백업 JSON 파일 선택', type=['json'], key='history_restore_file')
+        if st.button('백업 불러오기', disabled=restore_file is None):
+            try:
+                archive, messages = import_backup(restore_file.getvalue())
+                st.session_state.meeting_archive = archive
+                st.session_state.messages = messages
+                reset_meeting()
+                st.success(f'회의 {len(archive)}건과 대화 {len(messages)//2}개를 불러왔습니다.')
+                st.rerun()
+            except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+                st.error('백업을 불러올 수 없습니다: ' + str(exc)[:150])
+    if st.session_state.meeting_archive:
+        records = list(reversed(st.session_state.meeting_archive))
+        for record in records:
+            with st.container(border=True):
+                st.markdown(f"**{record['title']}**")
+                st.caption(f"회의일: {record.get('meeting_date') or '미상'} · 저장: {record['saved_at'][:16].replace('T',' ')} · 담당 업무 {len(record['tasks'])}건")
+                st.write(record['analysis'].get('summary',''))
+                cols = st.columns([1,1,1])
+                if cols[0].button('이 회의 불러오기', key=f"load_{record['id']}", use_container_width=True):
+                    st.session_state.analysis = copy.deepcopy(record['analysis'])
+                    st.session_state.tasks = copy.deepcopy(record['tasks'])
+                    st.session_state.meeting_transcript = record.get('transcript','')
+                    st.session_state.active_meeting_id = record['id']
+                    st.session_state.brief_audio = None
+                    st.session_state.brief_audio_for = None
+                    st.session_state.pending_email = None
+                    for task in st.session_state.tasks:
+                        st.session_state[f"status_{task['id']}"] = task.get('status', '미시작')
+                    st.success('이전 회의 자료를 불러왔습니다. 담당 업무 메뉴에서 확인해 주세요.')
+                    st.rerun()
+                report = build_meeting_report(record['analysis'], record['tasks'])
+                cols[1].download_button('회의록 다운로드', report,
+                                        file_name=f"meeting_{record['id']}.md", mime='text/markdown',
+                                        key=f"dl_{record['id']}", use_container_width=True)
+                if cols[2].button('기록 삭제', key=f"del_{record['id']}", use_container_width=True):
+                    st.session_state.meeting_archive = [r for r in st.session_state.meeting_archive if r['id'] != record['id']]
+                    if st.session_state.active_meeting_id == record['id']:
+                        reset_meeting()
+                    st.rerun()
+                with st.expander('최종 회의록 펼치기'):
+                    st.markdown(report)
+                if record.get('transcript'):
+                    with st.expander('회의 음성 전사 펼치기'):
+                        st.text(record['transcript'])
+    else:
+        st.caption('아직 저장된 회의가 없습니다. [회의 통합 분석]에서 자료를 분석하면 자동으로 이곳에 쌓입니다.')
 
 elif page == '담당 업무':
     if not st.session_state.analysis:
