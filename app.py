@@ -77,37 +77,72 @@ st.markdown("""<style>
 .st-key-aivle_fortune_line .aivle-fortune-title {font-size: .78rem; font-weight: 650; margin: 0 0 .25rem; color: var(--primary-color);}
 .st-key-aivle_fortune_line p {font-size: .88rem; text-align:center; margin: 0;}
 @media (max-width: 640px) {.st-key-home_hero {margin-top: 2rem;} .st-key-home_hero .aivle-home-wordmark {font-size:2.65rem !important;}}
-/* One Google-style composer. Built-in plus, microphone, send share one input. */
+/* AIVLE XI composer: one pill outline; internal actions are clean, borderless circles. */
 .st-key-home_search_row {margin: 0 auto 1.2rem; max-width: 740px;}
 .st-key-home_search_row [data-testid="stChatInput"] {
-   border: 1.5px solid var(--border-color) !important; border-radius: 28px !important;
-   box-shadow: 0 2px 12px color-mix(in srgb, var(--text-color) 7%, transparent);
+    border: 2px solid color-mix(in srgb, var(--text-color) 57%, transparent) !important;
+    border-radius: 30px !important;
+    background: var(--secondary-background-color) !important;
+    box-shadow: 0 2px 12px color-mix(in srgb, var(--text-color) 6%, transparent) !important;
+    transition: border-color .16s ease, box-shadow .16s ease;
 }
-.st-key-home_search_row [data-testid="stChatInput"] button {color: var(--text-color) !important;}
-/* High-contrast controls in both themes. Avoid pale --border-color for icon outlines. */
+.st-key-home_search_row [data-testid="stChatInput"]:focus-within {
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-color) 15%, transparent) !important;
+}
+/* Streamlit's +, microphone and send buttons must not look like square tiles. */
+.st-key-home_search_row [data-testid="stChatInput"] button,
+.st-key-home_search_row [data-testid="stChatInput"] [role="button"] {
+    border: 0 !important;
+    outline: 0 !important;
+    border-radius: 999px !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--text-color) !important;
+    opacity: 1 !important;
+    min-width: 34px !important;
+    min-height: 34px !important;
+    width: 34px !important;
+    height: 34px !important;
+    padding: 6px !important;
+    transition: background-color .16s ease, transform .16s ease;
+}
+.st-key-home_search_row [data-testid="stChatInput"] button:hover:not(:disabled),
+.st-key-home_search_row [data-testid="stChatInput"] [role="button"]:hover {
+    background: color-mix(in srgb, var(--text-color) 10%, transparent) !important;
+}
+.st-key-home_search_row [data-testid="stChatInput"] button:focus-visible,
+.st-key-home_search_row [data-testid="stChatInput"] [role="button"]:focus-visible {
+    outline: 2px solid var(--primary-color) !important;
+    outline-offset: 2px !important;
+}
+.st-key-home_search_row [data-testid="stChatInput"] button:disabled {opacity: .44 !important;}
+.st-key-home_search_row [data-testid="stChatInput"] button svg {
+    width: 19px !important;
+    height: 19px !important;
+    opacity: 1 !important;
+    color: inherit !important;
+    /* Do not override fill/stroke: native icon geometry must stay intact. */
+}
+/* High contrast for navigation icon and border; no global svg fill overrides. */
 .st-key-aivle_nav [data-testid="stButton"] button {
-   border: 2px solid color-mix(in srgb, var(--text-color) 58%, transparent) !important;
-   box-shadow: none !important;
+    border: 1.5px solid color-mix(in srgb, var(--text-color) 48%, transparent) !important;
+    box-shadow: none !important;
 }
 .st-key-aivle_nav [data-testid="stButton"] button:not([kind="primary"]):not([data-testid="baseButton-primary"]) {
-   background: var(--secondary-background-color) !important;
-   color: var(--text-color) !important;
+    background: var(--secondary-background-color) !important;
+    color: var(--text-color) !important;
 }
 .st-key-aivle_nav [data-testid="stButton"] button:hover,
 .st-key-aivle_nav [data-testid="stButton"] button:focus-visible {
-   border-color: var(--primary-color) !important;
-   box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 22%, transparent) !important;
+    border-color: var(--primary-color) !important;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 20%, transparent) !important;
 }
-.st-key-aivle_nav button svg, .st-key-home_search_row [data-testid="stChatInput"] button svg {
-   color: currentColor !important; fill: currentColor !important;
-   stroke: currentColor !important; opacity: 1 !important;
-}
-.st-key-aivle_nav button svg {width: 19px !important; height: 19px !important;}
-.st-key-home_search_row [data-testid="stChatInput"] {
-   border: 2px solid color-mix(in srgb, var(--text-color) 60%, transparent) !important;
-}
-.st-key-home_search_row [data-testid="stChatInput"] button:not(:disabled) {
-   color: var(--text-color) !important; opacity: 1 !important;
+.st-key-aivle_nav button svg {
+    width: 19px !important;
+    height: 19px !important;
+    color: inherit !important;
+    opacity: 1 !important;
 }
 /* Keep a tiny, visible custom avatar without restoring the bulky old banner. */
 .st-key-aivle_brand [data-testid="stImage"] img {border-radius: 12px; border: 2px solid color-mix(in srgb, var(--text-color) 55%, transparent); object-fit: cover;}
