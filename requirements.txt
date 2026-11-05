@@ -1,3 +1,0 @@
-streamlit>=1.55,<2
-openai>=1.99,<4
-Pillow>=10.4,<13
