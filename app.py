@@ -1,4 +1,4 @@
-"""에이블11: 깔끔한 사이드바 메뉴 UI + 멀티모달 분석 + TTS."""
+"""AIVLE Ⅺ: 깔끔한 사이드바 메뉴 UI + 멀티모달 분석 + TTS."""
 import io
 import re
 import hashlib
@@ -22,163 +22,70 @@ from services.email_service import parse_recipients, send_emails
 from services.history_service import make_record, export_backup, import_backup, upsert_record
 from services.calendar_service import save_event, deadline_entries, entries_for_day, month_html
 
-st.set_page_config(page_title='에이블11 | AI 업무비서', page_icon='🤖', layout='wide', initial_sidebar_state='expanded')
+st.set_page_config(page_title='AIVLE Ⅺ | AI 업무비서', page_icon='🤖', layout='wide', initial_sidebar_state='expanded')
 ASSET_DIR = Path(__file__).resolve().parent / 'assets'
 MAIN_IMAGE = ASSET_DIR / 'assistant_main.png'
 SIDE_IMAGE = ASSET_DIR / 'assistant_side.png'
 
-# 사용자별 테마 선택: 앱의 테마 CSS만 세션별로 변경합니다.
-if 'ui_theme' not in st.session_state:
-    st.session_state.ui_theme = '다크'
+# Streamlit 공식 테마를 단일 진실 공급원으로 사용합니다.
+# 앱의 오른쪽 위 메뉴 → Settings → Theme에서 Light / Dark를 전환합니다.
+# 고정된 다크 색상이나 CSS 기반 가짜 테마 전환은 기본 위젯과 충돌합니다.
 if 'custom_mascot' not in st.session_state:
     st.session_state.custom_mascot = None
 if 'ignored_mascot_digest' not in st.session_state:
     st.session_state.ignored_mascot_digest = None
 
-if st.session_state.ui_theme == '라이트':
-    bg, side, panel, border, fg, muted, accent_fg = '#F7F9FC', '#FFFFFF', '#FFFFFF', '#DCE3EA', '#182332', '#596878', '#FFFFFF'
-    icon_fg, field_bg, hover_bg = '#34475B', '#F5F7FA', '#ECF4F7'
-else:
-    bg, side, panel, border, fg, muted, accent_fg = '#090A0C', '#0C0D10', '#15191D', '#30343B', '#F4F7FA', '#AAB4C0', '#061313'
-    icon_fg, field_bg, hover_bg = '#DDE6EF', '#171A1F', '#1C3133'
-
-st.markdown(f"""<style>
-/* In-app theme variables override the fixed deployment theme for all nested widgets. */
-.stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"],
-[data-testid="stSidebar"], [data-testid="stSidebarContent"] {{
-  --background-color: {bg};
-  --secondary-background-color: {field_bg};
-  --text-color: {fg};
-  --primary-color: #109E97;
-  --st-background-color: {bg};
-  --st-secondary-background-color: {field_bg};
-  --st-text-color: {fg};
-  --st-primary-color: #109E97;
-  --st-border-color: {border};
-  color-scheme: {'light' if st.session_state.ui_theme == '라이트' else 'dark'};
-  color: {fg};
-}}
-[data-testid="stAppViewContainer"], [data-testid="stMain"] {{background:{bg} !important;}}
-[data-testid="stSidebar"], [data-testid="stSidebarContent"] {{background:{side} !important;color:{fg} !important;}}
-[data-testid="stHeader"] {{background:{bg} !important;}}
-.block-container {{max-width:1040px;padding-top:1.35rem;padding-bottom:3rem;}}
-.stApp h1,.stApp h2,.stApp h3 {{letter-spacing:-.04em;color:{fg} !important;}}
-.stApp h1 {{font-size:1.72rem !important;}}
-.stApp h2,.stApp h3 {{font-size:1.26rem !important;}}
-[data-testid="stVerticalBlockBorderWrapper"] > div {{border-radius:14px;}}
-[data-testid="stMetric"] {{background:{panel} !important;border:1px solid {border};border-radius:12px;padding:.8rem 1rem;}}
-[data-testid="stMetric"] * {{color:{fg};}}
-.stApp [data-testid="stFileUploader"] {{border-radius:12px;}}
-/* Controls must respond to light/dark, not the server's original dark palette. */
-.stApp input,.stApp textarea,.stApp select,
-.stApp [data-baseweb="input"] > div,
-.stApp [data-baseweb="select"] > div,
-.stApp [data-baseweb="textarea"] > div {{background-color:{field_bg} !important;color:{fg} !important;border-color:{border} !important;}}
-.stApp input::placeholder,.stApp textarea::placeholder {{color:{muted} !important;opacity:1;}}
-.stApp [data-testid="stCheckbox"] label,.stApp [data-testid="stRadio"] label,
-.stApp [data-testid="stToggle"] label,.stApp [data-testid="stWidgetLabel"] p {{color:{fg} !important;}}
-.stApp [data-testid="stCheckbox"] svg,.stApp [data-testid="stToggle"] svg {{color:{icon_fg};}}
-/* Target the actual Streamlit nav button and inner markdown container. */
-[data-testid="stSidebar"] [data-testid="stButton"] > button,
-[data-testid="stSidebar"] .stButton > button {{
-  display:flex !important;
-  flex-direction:row !important;
-  justify-content:flex-start !important;
-  align-items:center !important;
-  text-align:left !important;
-  gap:.7rem !important;
-  width:100% !important;
-  padding:.62rem .85rem !important;
-  border-radius:10px !important;
-  white-space:nowrap;
-}}
-[data-testid="stSidebar"] [data-testid="stButton"] > button > div,
-[data-testid="stSidebar"] [data-testid="stButton"] > button [data-testid="stMarkdownContainer"] {{
-  flex:0 1 auto !important;
-  text-align:left !important;
-  margin:0 !important;
-}}
-[data-testid="stSidebar"] [data-testid="stButton"] > button p {{text-align:left !important;margin:0 !important;}}
-[data-testid="stSidebar"] [data-testid="stButton"] > button:not([kind="primary"]) {{color:{fg} !important;background:transparent !important;border:1px solid transparent !important;}}
-[data-testid="stSidebar"] [data-testid="stButton"] > button:not([kind="primary"]):hover {{background:{hover_bg} !important;border-color:{border} !important;}}
-[data-testid="stSidebar"] [data-testid="stButton"] > button[kind="primary"] {{background:#109E97 !important;color:#FFFFFF !important;border:1px solid #109E97 !important;}}
-[data-testid="stSidebar"] [data-testid="stButton"] > button svg,
-[data-testid="stSidebar"] [data-testid="stButton"] > button [data-testid="stIcon"],
-[data-testid="stSidebar"] [data-testid="stButton"] > button .material-symbols-rounded {{
-  color:currentColor !important;
-  stroke:currentColor !important;
-  flex-shrink:0 !important;
-}}
-[data-testid="stSidebar"] [data-testid="stButton"] > button[kind="primary"] p {{color:#FFFFFF !important;}}
-[data-testid="stSidebar"] [data-testid="stButton"] > button:not([kind="primary"]) p {{color:{fg} !important;}}
-/* Responsive calendar colors; overrides hardcoded cell colors. */
-.stApp .aivle-calendar table {{width:100%;border-collapse:separate;border-spacing:4px;table-layout:fixed;}}
-.stApp .aivle-calendar th {{font-size:.8rem;color:{muted};text-align:center;padding:6px;}}
-.stApp .aivle-calendar td {{height:90px;vertical-align:top;padding:9px;border:1px solid {border} !important;border-radius:9px;background:{panel} !important;color:{fg} !important;}}
-.stApp .aivle-calendar td.other {{opacity:.45;}}
-.stApp .aivle-calendar td.today {{border:2px solid #109E97 !important;background:{hover_bg} !important;}}
-.stApp .aivle-calendar .day-number {{font-weight:650;margin-bottom:8px;color:{fg} !important;}}
-.stApp .aivle-calendar .event-dot {{color:{'#176B94' if st.session_state.ui_theme == '라이트' else '#60C5EE'} !important;}}
-.stApp .aivle-calendar .task-dot {{color:{'#805500' if st.session_state.ui_theme == '라이트' else '#E8C37B'} !important;}}
-
-/* Sidebar: compact navigation and true left alignment, regardless of button internals. */
-[data-testid="stSidebar"] .st-key-aivle_nav button {{
-  display: flex !important;
-  justify-content: flex-start !important;
-  align-items: center !important;
-  text-align: left !important;
-  min-height: 2.6rem !important;
-  height: auto !important;
-  padding: .45rem .75rem !important;
-  gap: .6rem !important;
-}}
-[data-testid="stSidebar"] .st-key-aivle_nav button > div,
-[data-testid="stSidebar"] .st-key-aivle_nav button [data-testid="stMarkdownContainer"] {{
-  width: auto !important;
-  flex: 0 0 auto !important;
-  text-align: left !important;
-  margin: 0 !important;
-  justify-content: flex-start !important;
-}}
-[data-testid="stSidebar"] .st-key-aivle_nav button p {{
-  text-align: left !important;
-  margin: 0 !important;
-  width: auto !important;
-}}
-[data-testid="stSidebar"] .st-key-aivle_nav [data-testid="stVerticalBlock"] {{gap: .16rem !important;}}
-[data-testid="stSidebar"] .st-key-aivle_nav button svg {{flex-shrink:0 !important;}}
-/* Sidebar settings and uploader: avoid dark theme surfaces leaking into light mode. */
-[data-testid="stSidebar"] [data-testid="stExpander"] details,
-[data-testid="stSidebar"] [data-testid="stExpander"] details > summary,
-[data-testid="stSidebar"] [data-testid="stExpander"] details > div,
-[data-testid="stSidebar"] [data-testid="stExpander"] [data-testid="stExpanderDetails"] {{
-  background-color: {side} !important;
-  color: {fg} !important;
-  border-color: {border} !important;
-}}
-[data-testid="stSidebar"] [data-testid="stExpander"] summary:hover {{background-color: {hover_bg} !important;}}
-[data-testid="stSidebar"] [data-testid="stExpander"] summary p,
-[data-testid="stSidebar"] [data-testid="stExpander"] summary svg,
-[data-testid="stSidebar"] [data-testid="stExpander"] summary span {{color: {fg} !important;}}
-[data-testid="stSidebar"] [data-testid="stFileUploader"] section,
-[data-testid="stSidebar"] [data-testid="stFileUploader"] [data-testid="stFileUploaderDropzone"],
-[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] {{
-  background-color: {field_bg} !important;
-  border: 1px dashed {border} !important;
-  color: {fg} !important;
-}}
-[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] button {{
-  background: {side} !important;
-  border: 1px solid {border} !important;
-  color: {fg} !important;
-  width: auto !important;
-}}
-[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] *,
-[data-testid="stSidebar"] [data-testid="stFileUploader"] small {{color: {muted} !important;}}
-[data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label,
-[data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] p {{color: {fg} !important;}}
+st.markdown("""<style>
+/* AIVLE Ⅺ: native Streamlit theme colors, no hardcoded light/dark surface colors. */
+.block-container {max-width: 1040px; padding-top: 1.35rem; padding-bottom: 3rem;}
+.stApp h1, .stApp h2, .stApp h3 {letter-spacing: -.04em;}
+.stApp h1 {font-size: 1.72rem !important;}
+.stApp h2, .stApp h3 {font-size: 1.26rem !important;}
+[data-testid="stVerticalBlockBorderWrapper"] > div {border-radius: 14px;}
+[data-testid="stMetric"] {border: 1px solid var(--border-color, #8995a3); border-radius: 12px; padding: .8rem 1rem;}
+/* Only the navigation group: don't accidentally restyle uploader, settings or other buttons. */
+[data-testid="stSidebar"] .st-key-aivle_nav [data-testid="stVerticalBlock"] {gap: .12rem !important;}
+[data-testid="stSidebar"] .st-key-aivle_nav [data-testid="stButton"] {margin: 0 !important;}
+[data-testid="stSidebar"] .st-key-aivle_nav [data-testid="stButton"] button {
+    width: 100% !important; min-height: 2.5rem !important; height: auto !important;
+    display: flex !important; flex-direction: row !important;
+    align-items: center !important; justify-content: flex-start !important;
+    text-align: left !important; gap: .65rem !important;
+    padding: .45rem .75rem !important; border-radius: 10px !important;
+}
+[data-testid="stSidebar"] .st-key-aivle_nav [data-testid="stButton"] button [data-testid="stMarkdownContainer"],
+[data-testid="stSidebar"] .st-key-aivle_nav [data-testid="stButton"] button > div {
+    text-align: left !important; flex: 0 1 auto !important;
+    width: auto !important; margin: 0 !important;
+}
+[data-testid="stSidebar"] .st-key-aivle_nav [data-testid="stButton"] button p {
+    text-align: left !important; margin: 0 !important;
+}
+[data-testid="stSidebar"] .st-key-aivle_nav [data-testid="stButton"] button svg {
+    flex-shrink: 0 !important; color: currentColor !important;
+}
+/* The settings accordion, upload dropzone, popovers and inputs inherit the native theme. */
+/* Calendar is custom HTML, so it must explicitly use native theme variables. */
+.aivle-calendar {width: 100%; overflow-x: auto;}
+.aivle-calendar table {width: 100%; min-width: 460px; table-layout: fixed;
+    border-collapse: separate; border-spacing: 4px;}
+.aivle-calendar th {text-align: center; font-size: .8rem;
+    color: var(--text-color); opacity: .72; padding: 6px;}
+.aivle-calendar td {height: 84px; vertical-align: top; padding: 8px;
+    border: 1px solid var(--border-color, #8995a3); border-radius: 9px;
+    background: var(--secondary-background-color); color: var(--text-color);}
+.aivle-calendar td.other {opacity: .4;}
+.aivle-calendar td.today {outline: 2px solid var(--primary-color); outline-offset: -2px;}
+.aivle-calendar .day-number {font-weight: 650; margin-bottom: 8px;}
+.aivle-calendar .event-dot, .aivle-calendar .task-dot {display: block; font-size: .69rem;
+    margin-top: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;}
+.aivle-calendar .event-dot {color: var(--text-color);}
+.aivle-calendar .task-dot {color: var(--primary-color); font-weight: 600;}
+@media (max-width: 640px) {
+    .aivle-calendar td {height: 70px; padding: 5px;}
+    .block-container {padding-top: 1rem;}
+}
 </style>""", unsafe_allow_html=True)
-
 
 def current_mascot(default_file):
     """Only in-memory bytes, never shared between sessions."""
@@ -295,7 +202,7 @@ with st.sidebar:
         else:
             st.markdown('🤖')
     with name_col:
-        st.markdown('**에이블11**')
+        st.markdown('**AIVLE Ⅺ**')
         st.caption('AI 개인비서 AIVLE')
     st.divider()
     # 단색 Material 아이콘은 테마와 함께 색이 바뀌어 이모지 색상 불일치를 방지합니다.
@@ -320,9 +227,8 @@ with st.sidebar:
     st.divider()
     st.caption(f'미완료 업무 {sum(t.get("status") != "완료" for t in st.session_state.tasks)}건 · 저장된 회의 {len(st.session_state.meeting_archive)}건')
     with st.expander('⚙️ 설정', expanded=False):
-        st.radio('화면 테마', ['다크', '라이트'], horizontal=True, key='ui_theme',
-                 help='현재 브라우저 세션의 화면 색상을 변경합니다.')
-        mascot_upload = st.file_uploader('내 에이블11 이미지 변경', type=['png','jpg','jpeg'],
+        st.caption('🎨 화면 테마: 오른쪽 위 ⋮ 메뉴 → Settings → Theme에서 Light / Dark를 선택하세요. 앱 전체 위젯에 동일하게 적용됩니다.')
+        mascot_upload = st.file_uploader('내 AIVLE Ⅺ 이미지 변경', type=['png','jpg','jpeg'],
                                          key='user_mascot_upload', help='최대 3MB · 현재 세션에서만 적용')
         if mascot_upload is not None:
             try:
@@ -506,7 +412,7 @@ elif page == '회의 기록':
                            mime='application/json', use_container_width=True)
     with col_restore:
         with st.popover('📥 백업 복원', use_container_width=True):
-            restore_file = st.file_uploader('에이블11 백업 JSON', type=['json'], key='history_restore_file')
+            restore_file = st.file_uploader('AIVLE Ⅺ 백업 JSON', type=['json'], key='history_restore_file')
             if st.button('백업 불러오기', disabled=restore_file is None):
                 try:
                     records, messages, events = import_backup(restore_file.getvalue(), include_events=True)
@@ -757,7 +663,7 @@ elif page == 'AI 비서 대화':
             st.markdown(message['content'])
     audio_input = st.audio_input('음성으로 질문하기', key='chat_audio_input')
     voice_submit = st.button('녹음한 질문 실행', disabled=audio_input is None)
-    user_question = st.chat_input('에이블11에게 질문을 입력하세요...')
+    user_question = st.chat_input('AIVLE Ⅺ에게 질문을 입력하세요...')
     if voice_submit and audio_input is not None:
         try:
             with st.spinner('음성 인식 중...'):
@@ -781,7 +687,7 @@ elif page == 'AI 비서 대화':
                     brief = make_briefing(st.session_state.tasks, st.session_state.owner, today)
                     kind = '오늘의 브리핑' if ('브리핑' in question or '오늘 할 일' in question) else '통합 회의록'
                     content = brief if kind == '오늘의 브리핑' else report
-                    st.session_state.pending_email = {'to': '', 'subject': f'[에이블11] {kind}', 'body': content}
+                    st.session_state.pending_email = {'to': '', 'subject': f'[AIVLE Ⅺ] {kind}', 'body': content}
                     answer = '이메일 초안을 준비했습니다. 아래 공유 영역에서 확인 후 전송할 수 있습니다.'
                 else:
                     answer = '회의 분석을 먼저 진행한 후 이메일을 준비할 수 있습니다.'
@@ -823,7 +729,7 @@ elif page == 'AI 비서 대화':
             st.rerun()
     if st.session_state.last_chat_reply:
         with st.container(border=True):
-            st.markdown('**🔊 에이블11의 답변 음성으로 듣기**')
+            st.markdown('**🔊 AIVLE Ⅺ의 답변 음성으로 듣기**')
             st.caption('재생 버튼을 누르면 MP3를 만들고 플레이어에 표시합니다. 브라우저가 자동 재생을 차단하면 ▶ 버튼을 눌러 주세요.')
             play_reply = st.button('🔊 마지막 답변 음성 생성 / 재생', use_container_width=True)
             if play_reply:
@@ -857,7 +763,7 @@ with st.expander('✉️ 최종 회의록 / 업무 브리핑 이메일 공유', 
             report = build_meeting_report(st.session_state.analysis, st.session_state.tasks)
             brief = make_briefing(st.session_state.tasks, st.session_state.owner, today)
             content = {'최종 회의록': report, '오늘의 브리핑': brief, '둘 다': report + '\n\n---\n\n' + brief}[kind]
-            st.session_state.pending_email = {'to': '', 'subject': f'[에이블11] {kind}', 'body': content}
+            st.session_state.pending_email = {'to': '', 'subject': f'[AIVLE Ⅺ] {kind}', 'body': content}
             st.session_state.email_results = []
         if st.session_state.pending_email is not None:
             with st.form('email_confirm_form', clear_on_submit=False):
