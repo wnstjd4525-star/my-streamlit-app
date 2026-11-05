@@ -66,8 +66,25 @@ st.markdown("""<style>
     flex-shrink: 0 !important; color: currentColor !important;
 }
 /* Lightweight Google-style search hero and mascot speech bubble. */
-.st-key-home_hero {padding: 1.2rem 0 1.5rem;}
-.st-key-home_hero [data-testid="stChatInput"] {border-radius: 999px;}
+/* Center the brand and mascot in a restrained homepage hero. */
+.st-key-home_hero {padding: 1.2rem 0 .6rem;}
+.st-key-home_hero [data-testid="stImage"] {display:flex; justify-content:center;}
+.st-key-home_hero h1, .st-key-home_hero .home_tagline {text-align:center;}
+/* The paperclip is a square icon directly to the left of the question box. */
+.st-key-home_search_row {margin: 0 auto 1.2rem; max-width: 740px;}
+.st-key-home_search_row [data-testid="stPopover"] button {
+   width: 46px !important; height: 46px !important; min-width: 46px !important;
+   padding: 0 !important; border: 1.5px solid var(--text-color) !important;
+   border-radius: 12px !important; display:flex !important;
+   align-items:center !important; justify-content:center !important;
+   color: var(--text-color) !important; background: var(--secondary-background-color) !important;
+}
+.st-key-home_search_row [data-testid="stPopover"] button:hover {border-color:var(--primary-color) !important;}
+.st-key-home_search_row [data-testid="stChatInput"] {border: 1.5px solid var(--text-color) !important; border-radius: 16px !important;}
+.st-key-home_search_row [data-testid="stChatInput"] button {color:var(--text-color) !important;}
+/* Distinct outlines in Light mode as well as Dark mode. */
+.st-key-aivle_nav [data-testid="stButton"] button {border:1px solid var(--border-color) !important;}
+.st-key-aivle_nav [data-testid="stButton"] button svg {stroke-width:2.2px;}
 .st-key-aivle_cheer_bubble {position: relative; border-radius: 16px; background: var(--secondary-background-color);}
 .st-key-aivle_cheer_bubble:before {content: ""; position:absolute; left:-7px; top:44%; width:12px; height:12px; transform:rotate(45deg); background: var(--secondary-background-color); border-left:1px solid var(--border-color); border-bottom:1px solid var(--border-color);}
 /* The settings accordion, upload dropzone, popovers and inputs inherit the native theme. */
@@ -214,18 +231,18 @@ CHEER_LINES = [
 
 
 def show_meeting_cheer():
-    # 진짜 운세가 아닌, 회의가 끝났을 때 보는 가벼운 랜덤 응원입니다.
+    """Render the same session's light-hearted fortune next to the home mascot."""
     if st.session_state.meeting_cheer is None:
         st.session_state.meeting_cheer = secrets.choice(CHEER_LINES)
-    icon_col, bubble_col = st.columns([1, 5], vertical_alignment='center')
-    with icon_col:
+    mascot_col, bubble_col = st.columns([1, 3], vertical_alignment='center', gap='small')
+    with mascot_col:
         if current_mascot(MAIN_IMAGE):
-            st.image(current_mascot(MAIN_IMAGE), width=78)
+            st.image(current_mascot(MAIN_IMAGE), width=102)
         else:
             st.markdown('🤖')
     with bubble_col:
         with st.container(border=True, key='aivle_cheer_bubble'):
-            st.caption('AIVLE Ⅺ의 한마디 · 오늘의 재미 운세')
+            st.caption('🍀 오늘의 운세')
             st.markdown(st.session_state.meeting_cheer)
 
 
@@ -320,67 +337,68 @@ page_kicker = {
     '브리핑': 'DAILY BRIEFING',
 }
 if page == '홈':
-    # 홈 검색창은 사이드바 메뉴와 독립적인 입력 요소입니다.
     with st.container(key='home_hero'):
-        left_space, hero_center, right_space = st.columns([1, 5, 1])
+        left_space, hero_center, right_space = st.columns([1, 3, 1])
         with hero_center:
-            if current_mascot(MAIN_IMAGE):
-                st.image(current_mascot(MAIN_IMAGE), width=108)
-            st.markdown('<h1 style="text-align:center; margin-bottom:0">AIVLE Ⅺ</h1>', unsafe_allow_html=True)
-            st.markdown('<p style="text-align:center;opacity:.68;margin-top:0">회의부터 일정까지, 무엇이든 도와드릴게요.</p>', unsafe_allow_html=True)
-            home_question = st.chat_input('궁금한 것을 입력하세요 · 예: 오늘 할 일 알려줘', key='home_chat_search')
-        st.caption('💬 질문을 입력하거나, 아래에서 회의 자료를 첨부해 분석하세요.')
+            st.markdown('<h1 style="text-align:center;margin-bottom:.75rem">AIVLE Ⅺ</h1>', unsafe_allow_html=True)
+            show_meeting_cheer()
+            st.markdown('<p class="home_tagline" style="text-align:center;opacity:.7;margin:.6rem 0 0">회의부터 일정까지, 무엇이든 도와드릴게요.</p>', unsafe_allow_html=True)
 else:
     st.caption(page_kicker.get(page, 'AIVLE Ⅺ'))
     st.title(page)
 
 if page == '홈':
-    with st.popover('📎 회의 자료 첨부 · 분석', use_container_width=True):
-        st.caption('TXT · 녹음 · 사진을 함께 넣거나 하나만 선택할 수 있어요.')
-        c1, c2 = st.columns(2)
-        with c1:
-            text_file = st.file_uploader('📄 텍스트', type=['txt'], key='meeting_txt', max_upload_size=1, help='UTF-8 텍스트 파일 · 최대 1MB')
-        with c2:
-            image_file = st.file_uploader('🖼️ 이미지', type=['png','jpg','jpeg'], key='meeting_img', max_upload_size=8)
-        recording_file = st.file_uploader(
-            '🎧 녹음 파일 첨부',
-            type=['mp3', 'm4a', 'mp4', 'mpeg', 'mpga', 'wav', 'webm'],
-            key='meeting_audio', max_upload_size=24,
-            help='업로드한 녹음을 STT로 전사한 뒤 회의록·화이트보드와 함께 분석합니다.'
-        )
-        st.markdown('**🎙️ 회의 직접 녹음**')
-        live_recording = st.audio_input('마이크로 회의 녹음 (녹음 종료 후 분석 가능)', key='live_meeting_audio')
-        st.caption('브라우저의 마이크 권한이 필요합니다. 녹음이 끝나면 통합 분석 실행을 눌러 주세요. 긴 회의는 파일 녹음 후 업로드를 권장합니다.')
-        if live_recording is not None:
-            st.success(f'마이크 녹음 준비됨 · {len(live_recording.getvalue())/1024/1024:.1f}MB')
-        if recording_file is not None:
-            st.caption(f'✓ 녹음 파일 첨부: {recording_file.name} · {recording_file.size / 1024 / 1024:.1f}MB')
-        audio_source = None
-        if live_recording is not None and recording_file is not None:
-            choice = st.radio('분석할 음성 선택', ['직접 녹음', '업로드 파일'], horizontal=True)
-            audio_source = live_recording if choice == '직접 녹음' else recording_file
-        else:
-            audio_source = live_recording if live_recording is not None else recording_file
-        # 화이트보드 미리보기는 제거했습니다. 파일명/형식 검증만 표시합니다.
-        whiteboard_bytes, image_mime, image_error = None, None, None
-        if image_file is not None:
-            try:
-                raw_bytes = image_file.getvalue()
-                if not raw_bytes or len(raw_bytes) > 8_000_000:
-                    raise ValueError('이미지는 8MB 이하의 PNG/JPG 파일이어야 합니다.')
-                with Image.open(io.BytesIO(raw_bytes)) as img:
-                    image_format = img.format
-                    if image_format not in ('PNG', 'JPEG'):
-                        raise ValueError('PNG 또는 JPG 이미지 파일만 지원합니다.')
-                    img.verify()
-                image_mime = 'image/png' if image_format == 'PNG' else 'image/jpeg'
-                whiteboard_bytes = raw_bytes
-                st.caption(f'✓ 화이트보드 업로드 완료: {image_file.name} · {len(raw_bytes) / 1024 / 1024:.1f}MB')
-            except (UnidentifiedImageError, OSError, ValueError) as exc:
-                image_error = str(exc)
-                st.error('이미지 검증 실패: ' + image_error)
+    with st.container(key='home_search_row'):
+        attach_col, question_col = st.columns([1, 12], vertical_alignment='bottom', gap='small')
+        with attach_col:
+            with st.popover('📎', help='회의 자료 첨부 · 분석'):
+                st.caption('TXT · 녹음 · 사진을 함께 넣거나 하나만 선택할 수 있어요.')
+                c1, c2 = st.columns(2)
+                with c1:
+                    text_file = st.file_uploader('📄 텍스트', type=['txt'], key='meeting_txt', max_upload_size=1, help='UTF-8 텍스트 파일 · 최대 1MB')
+                with c2:
+                    image_file = st.file_uploader('🖼️ 이미지', type=['png','jpg','jpeg'], key='meeting_img', max_upload_size=8)
+                recording_file = st.file_uploader(
+                    '🎧 녹음 파일 첨부',
+                    type=['mp3', 'm4a', 'mp4', 'mpeg', 'mpga', 'wav', 'webm'],
+                    key='meeting_audio', max_upload_size=24,
+                    help='업로드한 녹음을 STT로 전사한 뒤 회의록·화이트보드와 함께 분석합니다.'
+                )
+                st.markdown('**🎙️ 회의 직접 녹음**')
+                live_recording = st.audio_input('마이크로 회의 녹음 (녹음 종료 후 분석 가능)', key='live_meeting_audio')
+                st.caption('브라우저의 마이크 권한이 필요합니다. 녹음이 끝나면 통합 분석 실행을 눌러 주세요. 긴 회의는 파일 녹음 후 업로드를 권장합니다.')
+                if live_recording is not None:
+                    st.success(f'마이크 녹음 준비됨 · {len(live_recording.getvalue())/1024/1024:.1f}MB')
+                if recording_file is not None:
+                    st.caption(f'✓ 녹음 파일 첨부: {recording_file.name} · {recording_file.size / 1024 / 1024:.1f}MB')
+                audio_source = None
+                if live_recording is not None and recording_file is not None:
+                    choice = st.radio('분석할 음성 선택', ['직접 녹음', '업로드 파일'], horizontal=True)
+                    audio_source = live_recording if choice == '직접 녹음' else recording_file
+                else:
+                    audio_source = live_recording if live_recording is not None else recording_file
+                # 화이트보드 미리보기는 제거했습니다. 파일명/형식 검증만 표시합니다.
+                whiteboard_bytes, image_mime, image_error = None, None, None
+                if image_file is not None:
+                    try:
+                        raw_bytes = image_file.getvalue()
+                        if not raw_bytes or len(raw_bytes) > 8_000_000:
+                            raise ValueError('이미지는 8MB 이하의 PNG/JPG 파일이어야 합니다.')
+                        with Image.open(io.BytesIO(raw_bytes)) as img:
+                            image_format = img.format
+                            if image_format not in ('PNG', 'JPEG'):
+                                raise ValueError('PNG 또는 JPG 이미지 파일만 지원합니다.')
+                            img.verify()
+                        image_mime = 'image/png' if image_format == 'PNG' else 'image/jpeg'
+                        whiteboard_bytes = raw_bytes
+                        st.caption(f'✓ 화이트보드 업로드 완료: {image_file.name} · {len(raw_bytes) / 1024 / 1024:.1f}MB')
+                    except (UnidentifiedImageError, OSError, ValueError) as exc:
+                        image_error = str(exc)
+                        st.error('이미지 검증 실패: ' + image_error)
 
-        analyze_clicked = st.button('✨ 회의 분석하기', type='primary', use_container_width=True)
+                analyze_clicked = st.button('✨ 회의 분석하기', type='primary', use_container_width=True)
+        with question_col:
+            home_question = st.chat_input('궁금한 것을 입력하세요', key='home_chat_search')
     if analyze_clicked:
         if text_file is None and image_file is None and audio_source is None:
             st.warning('회의록 TXT, 화이트보드 이미지, 회의 녹음 중 하나 이상 업로드해 주세요.')
@@ -427,7 +445,6 @@ if page == '홈':
     if st.session_state.analysis:
         info = st.session_state.analysis
         st.subheader('📋 회의 분석 결과')
-        show_meeting_cheer()
         st.markdown('**' + str(info.get('meeting_title', '통합 회의록')) + '**')
         st.write(info.get('summary', ''))
         a, b, c = st.columns(3)
