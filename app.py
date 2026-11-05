@@ -4,6 +4,7 @@ import re
 import hashlib
 import copy
 import json
+import secrets
 from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
@@ -64,6 +65,11 @@ st.markdown("""<style>
 [data-testid="stSidebar"] .st-key-aivle_nav [data-testid="stButton"] button svg {
     flex-shrink: 0 !important; color: currentColor !important;
 }
+/* Lightweight Google-style search hero and mascot speech bubble. */
+.st-key-home_hero {padding: 1.2rem 0 1.5rem;}
+.st-key-home_hero [data-testid="stChatInput"] {border-radius: 999px;}
+.st-key-aivle_cheer_bubble {position: relative; border-radius: 16px; background: var(--secondary-background-color);}
+.st-key-aivle_cheer_bubble:before {content: ""; position:absolute; left:-7px; top:44%; width:12px; height:12px; transform:rotate(45deg); background: var(--secondary-background-color); border-left:1px solid var(--border-color); border-bottom:1px solid var(--border-color);}
 /* The settings accordion, upload dropzone, popovers and inputs inherit the native theme. */
 /* Calendar is custom HTML, so it must explicitly use native theme variables. */
 .aivle-calendar {width: 100%; overflow-x: auto;}
@@ -99,6 +105,7 @@ DEFAULTS = {
     'auto_voice': False, 'last_chat_audio_for': None, 'email_results': [],
     'meeting_transcript': '', 'meeting_archive': [], 'active_meeting_id': None,
     'calendar_events': [], 'calendar_selected': None, 'calendar_offset': 0,
+    'meeting_cheer': None,
 }
 for key, value in DEFAULTS.items():
     if key not in st.session_state:
@@ -126,6 +133,7 @@ def reset_meeting():
     st.session_state.meeting_transcript = ''
     st.session_state.email_results = []
     st.session_state.active_meeting_id = None
+    st.session_state.meeting_cheer = None
 
 
 def update_status(task_id):
@@ -194,6 +202,33 @@ def toggle_subtask(task_id, index):
                         record_id=st.session_state.active_meeting_id), preserve_created=True)
 
 
+CHEER_LINES = [
+    '🌟 오늘의 행운 키워드는 협업! 서로의 생각을 나누면 좋은 일이 생길지도 몰라요.',
+    '🍀 잘 정리된 회의 하나가 오늘의 여유를 만들어 줘요.',
+    '🚀 작은 할 일부터 하나씩! 오늘도 충분히 잘하고 있어요.',
+    '☀️ 오늘의 좋은 기운은 명확한 목표에서 시작돼요.',
+    '💡 아이디어가 떠오르는 하루! 메모 한 줄도 놓치지 마세요.',
+    '🌱 꾸준한 한 걸음이 큰 성과가 될 거예요.',
+    '🎯 회의는 끝났고, 이제 실천할 차례! 응원할게요.',
+]
+
+
+def show_meeting_cheer():
+    # 진짜 운세가 아닌, 회의가 끝났을 때 보는 가벼운 랜덤 응원입니다.
+    if st.session_state.meeting_cheer is None:
+        st.session_state.meeting_cheer = secrets.choice(CHEER_LINES)
+    icon_col, bubble_col = st.columns([1, 5], vertical_alignment='center')
+    with icon_col:
+        if current_mascot(MAIN_IMAGE):
+            st.image(current_mascot(MAIN_IMAGE), width=78)
+        else:
+            st.markdown('🤖')
+    with bubble_col:
+        with st.container(border=True, key='aivle_cheer_bubble'):
+            st.caption('AIVLE Ⅺ의 한마디 · 오늘의 재미 운세')
+            st.markdown(st.session_state.meeting_cheer)
+
+
 with st.sidebar:
     # 과도하게 큰 이미지를 피하고 로고/브랜드 영역만 간결하게 배치합니다.
     logo, name_col = st.columns([1, 3], vertical_alignment='center')
@@ -208,15 +243,22 @@ with st.sidebar:
     st.divider()
     # 단색 Material 아이콘은 테마와 함께 색이 바뀌어 이모지 색상 불일치를 방지합니다.
     menu_icons = [
-        ('회의 통합 분석', ':material/analytics:'),
-        ('회의 기록', ':material/folder_open:'),
+        ('홈', ':material/home:'),
+        ('회의록', ':material/folder_open:'),
         ('캘린더', ':material/calendar_month:'),
-        ('담당 업무', ':material/checklist:'),
-        ('업무 브리핑', ':material/assignment:'),
-        ('AI 비서 대화', ':material/chat_bubble_outline:'),
+        ('할 일', ':material/checklist:'),
+        ('브리핑', ':material/assignment:'),
     ]
-    if 'active_page' not in st.session_state:
-        st.session_state.active_page = '회의 통합 분석'
+    # 배포 전 열어둔 세션의 이전 메뉴명도 자연스럽게 새 메뉴로 이동합니다.
+    legacy_pages = {
+        '회의 통합 분석': '홈', 'AI 비서 대화': '홈',
+        '회의 기록': '회의록', '담당 업무': '할 일',
+        '업무 브리핑': '브리핑',
+    }
+    previous_page = st.session_state.get('active_page', '홈')
+    st.session_state.active_page = legacy_pages.get(previous_page, previous_page)
+    if st.session_state.active_page not in [name for name, _ in menu_icons]:
+        st.session_state.active_page = '홈'
     with st.container(key='aivle_nav'):
         for menu_index, (name, icon) in enumerate(menu_icons):
             if st.button(name, icon=icon,
@@ -268,35 +310,45 @@ with st.sidebar:
         if st.button('회의/업무 데이터 초기화', use_container_width=True):
             reset_meeting()
             st.rerun()
-    st.caption('회의·일정은 현재 세션에 저장됩니다. 영구 보관은 [회의 기록]에서 JSON 백업을 사용하세요.')
+    st.caption('회의·일정은 현재 세션에 저장됩니다. 영구 보관은 [회의록]에서 JSON 백업을 사용하세요.')
 
 # 메인 영역은 선택된 페이지 하나만 표시합니다.
 page_kicker = {
-    '회의 통합 분석': 'AI 개인비서 AIVLE',
-    '회의 기록': 'MEETING ARCHIVE',
+    '회의록': 'MEETING ARCHIVE',
     '캘린더': 'CALENDAR',
-    '담당 업무': '업무 대시보드',
-    '업무 브리핑': 'DAILY BRIEFING',
-    'AI 비서 대화': 'AI ASSISTANT',
+    '할 일': 'TASKS',
+    '브리핑': 'DAILY BRIEFING',
 }
-st.caption(page_kicker[page])
-st.title(page)
+if page == '홈':
+    # 홈 검색창은 사이드바 메뉴와 독립적인 입력 요소입니다.
+    with st.container(key='home_hero'):
+        left_space, hero_center, right_space = st.columns([1, 5, 1])
+        with hero_center:
+            if current_mascot(MAIN_IMAGE):
+                st.image(current_mascot(MAIN_IMAGE), width=108)
+            st.markdown('<h1 style="text-align:center; margin-bottom:0">AIVLE Ⅺ</h1>', unsafe_allow_html=True)
+            st.markdown('<p style="text-align:center;opacity:.68;margin-top:0">회의부터 일정까지, 무엇이든 도와드릴게요.</p>', unsafe_allow_html=True)
+            home_question = st.chat_input('궁금한 것을 입력하세요 · 예: 오늘 할 일 알려줘', key='home_chat_search')
+        st.caption('💬 질문을 입력하거나, 아래에서 회의 자료를 첨부해 분석하세요.')
+else:
+    st.caption(page_kicker.get(page, 'AIVLE Ⅺ'))
+    st.title(page)
 
-if page == '회의 통합 분석':
-    with st.container(border=True):
-        st.markdown('**회의 자료 업로드**')
+if page == '홈':
+    with st.popover('📎 회의 자료 첨부 · 분석', use_container_width=True):
+        st.caption('TXT · 녹음 · 사진을 함께 넣거나 하나만 선택할 수 있어요.')
         c1, c2 = st.columns(2)
         with c1:
-            text_file = st.file_uploader('회의록 TXT', type=['txt'], key='meeting_txt', max_upload_size=1, help='UTF-8 텍스트 파일 · 최대 1MB')
+            text_file = st.file_uploader('📄 텍스트', type=['txt'], key='meeting_txt', max_upload_size=1, help='UTF-8 텍스트 파일 · 최대 1MB')
         with c2:
-            image_file = st.file_uploader('화이트보드 이미지 (최대 8MB)', type=['png','jpg','jpeg'], key='meeting_img', max_upload_size=8)
+            image_file = st.file_uploader('🖼️ 이미지', type=['png','jpg','jpeg'], key='meeting_img', max_upload_size=8)
         recording_file = st.file_uploader(
-            '회의 녹음 파일 (선택 · MP3/M4A/WAV 등, 최대 24MB)',
+            '🎧 녹음 파일 첨부',
             type=['mp3', 'm4a', 'mp4', 'mpeg', 'mpga', 'wav', 'webm'],
             key='meeting_audio', max_upload_size=24,
             help='업로드한 녹음을 STT로 전사한 뒤 회의록·화이트보드와 함께 분석합니다.'
         )
-        st.markdown('**🎙️ 회의 중 바로 녹음하기**')
+        st.markdown('**🎙️ 회의 직접 녹음**')
         live_recording = st.audio_input('마이크로 회의 녹음 (녹음 종료 후 분석 가능)', key='live_meeting_audio')
         st.caption('브라우저의 마이크 권한이 필요합니다. 녹음이 끝나면 통합 분석 실행을 눌러 주세요. 긴 회의는 파일 녹음 후 업로드를 권장합니다.')
         if live_recording is not None:
@@ -328,7 +380,7 @@ if page == '회의 통합 분석':
                 image_error = str(exc)
                 st.error('이미지 검증 실패: ' + image_error)
 
-        analyze_clicked = st.button('통합 분석 실행', type='primary', use_container_width=True)
+        analyze_clicked = st.button('✨ 회의 분석하기', type='primary', use_container_width=True)
     if analyze_clicked:
         if text_file is None and image_file is None and audio_source is None:
             st.warning('회의록 TXT, 화이트보드 이미지, 회의 녹음 중 하나 이상 업로드해 주세요.')
@@ -360,7 +412,8 @@ if page == '회의 통합 분석':
                 record = make_record(analysis, st.session_state.tasks, transcript_text)
                 st.session_state.meeting_archive = upsert_record(st.session_state.meeting_archive, record)
                 st.session_state.active_meeting_id = record['id']
-                st.success(f'분석 완료 · 추출 업무 {len(st.session_state.tasks)}건 · [회의 기록]에 보관됨')
+                st.session_state.meeting_cheer = secrets.choice(CHEER_LINES)
+                st.success(f'분석 완료 · 추출 업무 {len(st.session_state.tasks)}건 · [회의록]에 보관됨')
             except Exception as exc:
                 st.error(format_problem(exc))
 
@@ -373,7 +426,9 @@ if page == '회의 통합 분석':
 
     if st.session_state.analysis:
         info = st.session_state.analysis
-        st.subheader(info.get('meeting_title', '통합 회의록'))
+        st.subheader('📋 회의 분석 결과')
+        show_meeting_cheer()
+        st.markdown('**' + str(info.get('meeting_title', '통합 회의록')) + '**')
         st.write(info.get('summary', ''))
         a, b, c = st.columns(3)
         a.metric('추출 업무', len(st.session_state.tasks))
@@ -395,7 +450,7 @@ if page == '회의 통합 분석':
     else:
         st.caption('회의록·화이트보드·회의 녹음 중 하나 이상 올리고 분석을 실행하세요.')
 
-elif page == '회의 기록':
+elif page == '회의록':
     st.caption('🗂️ 회의별 핵심 요약과 담당 업무를 확인하고, 필요할 때 다시 열 수 있습니다.')
     archive = st.session_state.meeting_archive
     total_tasks = sum(len(r.get('tasks', [])) for r in archive)
@@ -409,7 +464,7 @@ elif page == '회의 기록':
     col_backup, col_restore = st.columns([2, 1], vertical_alignment='bottom')
     with col_backup:
         st.download_button('⬇️ 회의·일정·대화 백업 (JSON)', backup_json,
-                           file_name=f'aivle11_backup_{today.isoformat()}.json',
+                           file_name=f'aivle_xi_backup_{today.isoformat()}.json',
                            mime='application/json', use_container_width=True)
     with col_restore:
         with st.popover('📥 백업 복원', use_container_width=True):
@@ -481,7 +536,7 @@ elif page == '회의 기록':
                     st.session_state.pending_email = None
                     for task in st.session_state.tasks:
                         st.session_state[f"status_{task['id']}"] = task.get('status', '미시작')
-                    st.session_state.active_page = '담당 업무'
+                    st.session_state.active_page = '할 일'
                     st.rerun()
                 report = build_meeting_report(info, tasks)
                 actions[1].download_button('📥 회의록 저장', report,
@@ -498,7 +553,7 @@ elif page == '회의 기록':
                     with st.expander('🎙️ 회의 음성 전사 보기'):
                         st.text(record['transcript'])
     else:
-        st.info('📭 저장된 회의가 없습니다. 회의 통합 분석 메뉴에서 첫 회의를 분석해 보세요.')
+        st.info('📭 저장된 회의가 없습니다. 홈에서 첫 회의를 분석해 보세요.')
 
 elif page == '캘린더':
     from datetime import date as calendar_date
@@ -596,11 +651,11 @@ elif page == '캘린더':
                 st.session_state.calendar_events = [e for e in events if e['id'] != chosen_id]
                 st.success('일정을 삭제했습니다.')
                 st.rerun()
-    st.caption('직접 등록 일정은 세션에서만 유지됩니다. 회의 기록 메뉴의 JSON 백업에 일정도 함께 포함됩니다.')
+    st.caption('직접 등록 일정은 세션에서만 유지됩니다. 회의록 메뉴의 JSON 백업에 일정도 함께 포함됩니다.')
 
-elif page == '담당 업무':
+elif page == '할 일':
     if not st.session_state.analysis:
-        st.info('먼저 회의 통합 분석 메뉴에서 자료를 분석해 주세요.')
+        st.info('먼저 홈에서 자료를 분석해 주세요.')
     else:
         ranked = rank_tasks(st.session_state.tasks, today)
         mine = personal_tasks(ranked, st.session_state.owner)
@@ -637,7 +692,7 @@ elif page == '담당 업무':
         if not (ranked if show_all else mine):
             st.warning('담당 업무를 찾지 못했습니다. 설정에서 담당자 이름을 확인해 주세요.')
 
-elif page == '업무 브리핑':
+elif page == '브리핑':
     if not st.session_state.analysis:
         st.info('회의 분석 후 오늘의 업무 브리핑을 이용할 수 있습니다.')
     else:
@@ -660,20 +715,17 @@ elif page == '업무 브리핑':
         if st.session_state.brief_audio is not None and st.session_state.brief_audio_for == briefing:
             st.audio(st.session_state.brief_audio, format='audio/mp3', autoplay=listen)
 
-elif page == 'AI 비서 대화':
-    st.caption('텍스트 또는 음성으로 질문하세요. 최근 10개 대화를 기억합니다.')
-    if not st.session_state.messages:
-        with st.container(border=True):
-            if current_mascot(MAIN_IMAGE):
-                st.image(current_mascot(MAIN_IMAGE), width=96)
-            st.markdown('**이렇게 질문해 보세요**')
-            st.caption('오늘 가장 급한 업무가 뭐야? · 회의에서 확정된 사항을 알려줘 · KPI 정의서를 어떻게 시작할까?')
+if page == '홈':
+    st.divider()
+    st.markdown('**💬 대화**')
+    st.caption('최근 10개 대화를 기억해요. 질문은 홈 상단 검색창에 입력하세요.')
     for message in st.session_state.messages[-20:]:
         with st.chat_message(message['role']):
             st.markdown(message['content'])
-    audio_input = st.audio_input('음성으로 질문하기', key='chat_audio_input')
-    voice_submit = st.button('녹음한 질문 실행', disabled=audio_input is None)
-    user_question = st.chat_input('AIVLE Ⅺ에게 질문을 입력하세요...')
+    with st.expander('🎙️ 음성으로 질문하기'):
+        audio_input = st.audio_input('질문 녹음', key='chat_audio_input')
+        voice_submit = st.button('음성 질문 보내기', disabled=audio_input is None)
+    user_question = home_question
     if voice_submit and audio_input is not None:
         try:
             with st.spinner('음성 인식 중...'):
@@ -764,7 +816,7 @@ elif page == 'AI 비서 대화':
 
 # 이메일은 AI와 독립적으로 처리하며 반드시 사용자 최종 확인이 있어야 발송합니다.
 st.divider()
-with st.expander('✉️ 최종 회의록 / 업무 브리핑 이메일 공유', expanded=bool(st.session_state.pending_email)):
+with st.expander('✉️ 회의록·브리핑 이메일 공유', expanded=bool(st.session_state.pending_email)):
     if not st.session_state.analysis:
         st.info('회의 분석이 완료되면 이메일 공유가 활성화됩니다.')
     else:
