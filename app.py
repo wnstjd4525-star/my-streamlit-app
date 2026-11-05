@@ -37,27 +37,53 @@ if 'ignored_mascot_digest' not in st.session_state:
 
 if st.session_state.ui_theme == '라이트':
     bg, side, panel, border, fg, muted, accent_fg = '#F7F9FC', '#FFFFFF', '#FFFFFF', '#DCE3EA', '#182332', '#596878', '#FFFFFF'
+    icon_fg, field_bg, hover_bg = '#34475B', '#F5F7FA', '#ECF4F7'
 else:
     bg, side, panel, border, fg, muted, accent_fg = '#090A0C', '#0C0D10', '#15191D', '#30343B', '#F4F7FA', '#AAB4C0', '#061313'
+    icon_fg, field_bg, hover_bg = '#DDE6EF', '#171A1F', '#1C3133'
 
 st.markdown(f"""<style>
-[data-testid="stAppViewContainer"] {{background: {bg}; color: {fg};}}
-[data-testid="stSidebar"] {{background: {side}; border-right: 1px solid {border}; color: {fg};}}
-[data-testid="stHeader"] {{background: {bg};}}
-.block-container {{max-width: 1040px; padding-top: 1.35rem; padding-bottom: 3rem;}}
-h1, h2, h3 {{letter-spacing: -.04em; color: {fg};}}
-h1 {{font-size: 1.72rem !important;}}
-h2, h3 {{font-size: 1.26rem !important;}}
-[data-testid="stVerticalBlockBorderWrapper"] > div {{border-radius: 14px;}}
-[data-testid="stMetric"] {{background: {panel}; border:1px solid {border}; border-radius:12px; padding:.8rem 1rem;}}
+/* 에이블11 테마: SVG/Material 아이콘을 OS 다크모드와 독립적으로 동기화 */
+:root {{color-scheme: {'light' if st.session_state.ui_theme == '라이트' else 'dark'};}}
+[data-testid="stAppViewContainer"] {{background:{bg};color:{fg};}}
+[data-testid="stSidebar"] {{background:{side};border-right:1px solid {border};color:{fg};}}
+[data-testid="stHeader"] {{background:{bg};}}
+.block-container {{max-width:1040px;padding-top:1.35rem;padding-bottom:3rem;}}
+h1,h2,h3 {{letter-spacing:-.04em;color:{fg} !important;}}
+h1 {{font-size:1.72rem !important;}}
+h2,h3 {{font-size:1.26rem !important;}}
+[data-testid="stVerticalBlockBorderWrapper"] > div {{border-radius:14px;}}
+[data-testid="stMetric"] {{background:{panel};border:1px solid {border};border-radius:12px;padding:.8rem 1rem;}}
+[data-testid="stMetric"] [data-testid="stMetricLabel"],
+[data-testid="stMetric"] [data-testid="stMetricValue"] {{color:{fg};}}
 [data-testid="stFileUploader"] {{border-radius:12px;}}
-.stApp .aivle-calendar td {{background: {panel}; border-color: {border}; color: {fg};}}
-.stApp .aivle-calendar th {{color: {muted};}}
-.stApp .aivle-calendar td.today {{border:2px solid #13BDB3; background: {panel};}}
-.stApp p, .stApp label, .stApp span {{color: inherit;}}
-div.stButton > button[kind="primary"] {{background:#109E97; color:{accent_fg}; border:0;}}
+/* 테마에 의존하지 않는 기본 아이콘 잔색 제거 */
+[data-testid="stSidebar"] button svg,
+[data-testid="stSidebar"] button .material-symbols-rounded,
+[data-testid="stSidebar"] button .material-symbols-outlined,
+[data-testid="stSidebar"] [data-testid="stIcon"] {{color:{icon_fg} !important;stroke:currentColor;}}
+[data-testid="stSidebar"] button[data-testid="stBaseButton-primary"] svg,
+[data-testid="stSidebar"] button[data-testid="stBaseButton-primary"] .material-symbols-rounded {{color:{accent_fg} !important;}}
+[data-testid="stSidebar"] button {{width:100%;justify-content:flex-start;text-align:left;color:{fg};background:transparent;border-color:transparent;}}
+[data-testid="stSidebar"] button:hover {{background:{hover_bg};border-color:{border};}}
+[data-testid="stSidebar"] button[data-testid="stBaseButton-primary"] {{background:#109E97;color:{accent_fg};border:0;}}
+[data-testid="stSidebar"] button[data-testid="stBaseButton-primary"]:hover {{background:#0C8D86;}}
+.stApp [data-testid="stCheckbox"] svg,
+.stApp [data-testid="stToggle"] svg {{color:{icon_fg};}}
+.stApp [data-testid="stTextInput"] input,
+.stApp [data-testid="stTextArea"] textarea {{background:{field_bg};color:{fg};}}
 div.stButton > button {{border-radius:10px;}}
-[data-testid="stSidebar"] [role="radiogroup"] label {{padding:.35rem .25rem;}}
+div.stButton > button[kind="primary"] {{background:#109E97;color:{accent_fg};border:0;}}
+/* 달력: 내부의 어두운 고정 스타일보다 항상 마지막에 적용 */
+.stApp .aivle-calendar table {{width:100%;border-collapse:separate;border-spacing:4px;table-layout:fixed;}}
+.stApp .aivle-calendar th {{font-size:.8rem;color:{muted};text-align:center;padding:6px;}}
+.stApp .aivle-calendar td {{height:90px;vertical-align:top;padding:9px;border:1px solid {border};border-radius:9px;background:{panel};color:{fg};}}
+.stApp .aivle-calendar td.other {{opacity:.45;}}
+.stApp .aivle-calendar td.today {{border:2px solid #109E97;background:{hover_bg};}}
+.stApp .aivle-calendar .day-number {{font-weight:650;margin-bottom:8px;color:{fg};}}
+.stApp .aivle-calendar .event-dot,.stApp .aivle-calendar .task-dot {{display:block;font-size:.69rem;margin-top:3px;overflow:hidden;white-space:nowrap;}}
+.stApp .aivle-calendar .event-dot {{color:{'#176B94' if st.session_state.ui_theme == '라이트' else '#60C5EE'};}}
+.stApp .aivle-calendar .task-dot {{color:{'#805500' if st.session_state.ui_theme == '라이트' else '#E8C37B'};}}
 </style>""", unsafe_allow_html=True)
 
 
@@ -179,20 +205,24 @@ with st.sidebar:
         st.markdown('**에이블11**')
         st.caption('AI 개인비서 AIVLE')
     st.divider()
-    page = st.radio(
-        '메뉴',
-        ['회의 통합 분석', '회의 기록', '캘린더', '담당 업무', '업무 브리핑', 'AI 비서 대화'],
-        format_func=lambda name: {
-            '회의 통합 분석': '📊  회의 통합 분석',
-            '회의 기록': '📁  회의 기록',
-            '캘린더': '📅  캘린더',
-            '담당 업무': '✅  담당 업무',
-            '업무 브리핑': '📋  업무 브리핑',
-            'AI 비서 대화': '💬  AI 비서 대화',
-        }[name],
-        label_visibility='collapsed',
-        key='page_navigation',
-    )
+    # 단색 Material 아이콘은 테마와 함께 색이 바뀌어 이모지 색상 불일치를 방지합니다.
+    menu_icons = [
+        ('회의 통합 분석', ':material/analytics:'),
+        ('회의 기록', ':material/folder_open:'),
+        ('캘린더', ':material/calendar_month:'),
+        ('담당 업무', ':material/checklist:'),
+        ('업무 브리핑', ':material/assignment:'),
+        ('AI 비서 대화', ':material/chat_bubble_outline:'),
+    ]
+    if 'active_page' not in st.session_state:
+        st.session_state.active_page = '회의 통합 분석'
+    for name, icon in menu_icons:
+        if st.button(name, icon=icon,
+                     type='primary' if st.session_state.active_page == name else 'secondary',
+                     key='nav_' + name, use_container_width=True):
+            st.session_state.active_page = name
+            st.rerun()
+    page = st.session_state.active_page
     st.divider()
     st.caption(f'미완료 업무 {sum(t.get("status") != "완료" for t in st.session_state.tasks)}건 · 저장된 회의 {len(st.session_state.meeting_archive)}건')
     with st.expander('⚙️ 설정', expanded=False):
@@ -365,36 +395,84 @@ if page == '회의 통합 분석':
         st.caption('회의록·화이트보드·회의 녹음 중 하나 이상 올리고 분석을 실행하세요.')
 
 elif page == '회의 기록':
-    st.caption('분석 완료한 회의록을 다시 열거나, JSON으로 백업하고 다른 세션에서 복원할 수 있습니다.')
-    st.info('현재 보관함은 브라우저 세션에만 유지됩니다. 중요한 회의는 꼭 백업 파일을 다운로드하세요. 원본 음성·사진은 보관하지 않습니다.')
-    backup_json = export_backup(st.session_state.meeting_archive, st.session_state.messages, st.session_state.calendar_events)
-    st.download_button('⬇️ 회의·일정·최근 대화 JSON 백업', backup_json,
-                       file_name=f'aivle_meeting_backup_{today.isoformat()}.json',
-                       mime='application/json', use_container_width=True)
-    with st.expander('📥 이전 백업 복원'):
-        restore_file = st.file_uploader('에이블11 백업 JSON 파일 선택', type=['json'], key='history_restore_file')
-        if st.button('백업 불러오기', disabled=restore_file is None):
-            try:
-                archive, messages, events = import_backup(restore_file.getvalue(), include_events=True)
-                st.session_state.meeting_archive = archive
-                st.session_state.messages = messages
-                st.session_state.calendar_events = events
-                reset_meeting()
-                st.success(f'회의 {len(archive)}건, 일정 {len(events)}건, 대화 {len(messages)//2}개를 불러왔습니다.')
-                st.rerun()
-            except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
-                st.error('백업을 불러올 수 없습니다: ' + str(exc)[:150])
-    if st.session_state.meeting_archive:
-        records = list(reversed(st.session_state.meeting_archive))
-        for record in records:
+    st.caption('🗂️ 회의별 핵심 요약과 담당 업무를 확인하고, 필요할 때 다시 열 수 있습니다.')
+    archive = st.session_state.meeting_archive
+    total_tasks = sum(len(r.get('tasks', [])) for r in archive)
+    active_tasks = sum(t.get('status') != '완료' for r in archive for t in r.get('tasks', []))
+    m1, m2, m3 = st.columns(3)
+    m1.metric('📁 저장된 회의', f'{len(archive)}건')
+    m2.metric('📋 추출된 업무', f'{total_tasks}건')
+    m3.metric('⏳ 미완료 업무', f'{active_tasks}건')
+    st.info('💾 기록은 현재 브라우저 세션에만 유지됩니다. 중요한 회의는 JSON 백업을 다운로드해 주세요. 원본 음성·사진은 보관하지 않습니다.')
+    backup_json = export_backup(archive, st.session_state.messages, st.session_state.calendar_events)
+    col_backup, col_restore = st.columns([2, 1], vertical_alignment='bottom')
+    with col_backup:
+        st.download_button('⬇️ 회의·일정·대화 백업 (JSON)', backup_json,
+                           file_name=f'aivle11_backup_{today.isoformat()}.json',
+                           mime='application/json', use_container_width=True)
+    with col_restore:
+        with st.popover('📥 백업 복원', use_container_width=True):
+            restore_file = st.file_uploader('에이블11 백업 JSON', type=['json'], key='history_restore_file')
+            if st.button('백업 불러오기', disabled=restore_file is None):
+                try:
+                    records, messages, events = import_backup(restore_file.getvalue(), include_events=True)
+                    st.session_state.meeting_archive = records
+                    st.session_state.messages = messages
+                    st.session_state.calendar_events = events
+                    reset_meeting()
+                    st.rerun()
+                except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+                    st.error('백업 복원 실패: ' + str(exc)[:150])
+
+    st.divider()
+    if archive:
+        search_col, sort_col = st.columns([3, 2])
+        with search_col:
+            keyword = st.text_input('🔎 회의 검색', placeholder='회의 제목, 요약, 담당자 검색')
+        with sort_col:
+            sort_choice = st.selectbox('정렬 기준', ['최근 저장순', '오래된 저장순', '회의일 최신순'])
+        def searchable(record):
+            info = record.get('analysis') or {}
+            texts = [record.get('title', ''), info.get('summary', '')]
+            texts += [str(t.get('owner','')) + ' ' + str(t.get('title','')) for t in record.get('tasks', [])]
+            return ' '.join(str(x) for x in texts).casefold()
+        filtered = [r for r in archive if keyword.casefold().strip() in searchable(r)]
+        if sort_choice == '최근 저장순':
+            filtered.sort(key=lambda r: r.get('saved_at',''), reverse=True)
+        elif sort_choice == '오래된 저장순':
+            filtered.sort(key=lambda r: r.get('saved_at',''))
+        else:
+            filtered.sort(key=lambda r: r.get('meeting_date') or '', reverse=True)
+        st.caption(f'검색 결과 {len(filtered)}건 / 전체 {len(archive)}건')
+        if not filtered:
+            st.info('검색 조건과 일치하는 회의가 없습니다.')
+        for record in filtered:
+            info = record.get('analysis') or {}
+            tasks = record.get('tasks', [])
+            pending = [t for t in tasks if t.get('status') != '완료']
+            decisions = info.get('decisions', []) or []
+            conflicts = info.get('conflicts', []) or []
             with st.container(border=True):
-                st.markdown(f"**{record['title']}**")
-                st.caption(f"회의일: {record.get('meeting_date') or '미상'} · 저장: {record['saved_at'][:16].replace('T',' ')} · 담당 업무 {len(record['tasks'])}건")
-                st.write(record['analysis'].get('summary',''))
-                cols = st.columns([1,1,1])
-                if cols[0].button('이 회의 불러오기', key=f"load_{record['id']}", use_container_width=True):
-                    st.session_state.analysis = copy.deepcopy(record['analysis'])
-                    st.session_state.tasks = copy.deepcopy(record['tasks'])
+                st.markdown('### 📑 ' + str(record.get('title') or '제목 없는 회의'))
+                st.caption(f"🗓️ 회의일: {record.get('meeting_date') or '미상'}　·　💾 저장: {str(record.get('saved_at',''))[:16].replace('T',' ')}")
+                st.write(info.get('summary') or '요약이 없습니다.')
+                st.caption(f'✅ 결정 {len(decisions)}건　 |　📋 업무 {len(tasks)}건　 |　⏳ 미완료 {len(pending)}건　 |　⚠️ 확인 필요 {len(conflicts)}건')
+                if decisions:
+                    st.markdown('**✅ 주요 결정사항**')
+                    for decision in decisions[:3]:
+                        st.markdown('• ' + str(decision))
+                    if len(decisions) > 3:
+                        st.caption(f'그 외 {len(decisions)-3}건은 전체 회의록에서 확인하세요.')
+                if conflicts:
+                    st.warning('⚠️ 자료 간 불일치 또는 확인 필요: ' + str(conflicts[0]))
+                if pending:
+                    with st.expander(f'📋 미완료 업무 미리보기 ({len(pending)}건)'):
+                        for task in pending[:10]:
+                            st.markdown(f"- **{task.get('title','제목 없음')}** · {task.get('owner','담당 미정')} · 마감 {task.get('due_date') or '미정'}")
+                actions = st.columns([1.15, 1.15, .8])
+                if actions[0].button('📂 회의 불러오기', key=f"load_{record['id']}", use_container_width=True):
+                    st.session_state.analysis = copy.deepcopy(info)
+                    st.session_state.tasks = copy.deepcopy(tasks)
                     st.session_state.meeting_transcript = record.get('transcript','')
                     st.session_state.active_meeting_id = record['id']
                     st.session_state.brief_audio = None
@@ -402,24 +480,24 @@ elif page == '회의 기록':
                     st.session_state.pending_email = None
                     for task in st.session_state.tasks:
                         st.session_state[f"status_{task['id']}"] = task.get('status', '미시작')
-                    st.success('이전 회의 자료를 불러왔습니다. 담당 업무 메뉴에서 확인해 주세요.')
+                    st.session_state.active_page = '담당 업무'
                     st.rerun()
-                report = build_meeting_report(record['analysis'], record['tasks'])
-                cols[1].download_button('회의록 다운로드', report,
+                report = build_meeting_report(info, tasks)
+                actions[1].download_button('📥 회의록 저장', report,
                                         file_name=f"meeting_{record['id']}.md", mime='text/markdown',
                                         key=f"dl_{record['id']}", use_container_width=True)
-                if cols[2].button('기록 삭제', key=f"del_{record['id']}", use_container_width=True):
-                    st.session_state.meeting_archive = [r for r in st.session_state.meeting_archive if r['id'] != record['id']]
+                if actions[2].button('🗑️ 삭제', key=f"del_{record['id']}", use_container_width=True):
+                    st.session_state.meeting_archive = [r for r in archive if r['id'] != record['id']]
                     if st.session_state.active_meeting_id == record['id']:
                         reset_meeting()
                     st.rerun()
-                with st.expander('최종 회의록 펼치기'):
+                with st.expander('📄 전체 회의록 보기'):
                     st.markdown(report)
                 if record.get('transcript'):
-                    with st.expander('회의 음성 전사 펼치기'):
+                    with st.expander('🎙️ 회의 음성 전사 보기'):
                         st.text(record['transcript'])
     else:
-        st.caption('아직 저장된 회의가 없습니다. [회의 통합 분석]에서 자료를 분석하면 자동으로 이곳에 쌓입니다.')
+        st.info('📭 저장된 회의가 없습니다. 회의 통합 분석 메뉴에서 첫 회의를 분석해 보세요.')
 
 elif page == '캘린더':
     from datetime import date as calendar_date
@@ -447,16 +525,6 @@ elif page == '캘린더':
         if st.button('다음 ▶', key='cal_next', use_container_width=True):
             st.session_state.calendar_offset += 1
             st.rerun()
-    st.markdown("""<style>
-    .aivle-calendar table{width:100%;border-collapse:separate;border-spacing:4px;table-layout:fixed}
-    .aivle-calendar th{font-size:.8rem;color:#a9b2be;text-align:center;padding:6px}
-    .aivle-calendar td{height:90px;vertical-align:top;padding:9px;border:1px solid #2d343a;border-radius:9px;background:#15191d}
-    .aivle-calendar td.other{opacity:.3}
-    .aivle-calendar td.today{border:2px solid #13bdb3;background:#142a2a}
-    .aivle-calendar .day-number{font-weight:650;margin-bottom:8px}
-    .aivle-calendar .event-dot,.aivle-calendar .task-dot{display:block;font-size:.69rem;margin-top:3px;overflow:hidden;white-space:nowrap}
-    .aivle-calendar .event-dot{color:#60c5ee}.aivle-calendar .task-dot{color:#e8c37b}
-    </style>""", unsafe_allow_html=True)
     st.markdown(month_html(year, month, events, deadlines, today), unsafe_allow_html=True)
     st.caption('파란색: 직접 등록 일정 · 노란색: 미완료 업무 마감 · 날짜별 상세는 아래에서 선택')
     chosen = st.date_input('확인할 날짜', value=today, key='cal_day_select')
