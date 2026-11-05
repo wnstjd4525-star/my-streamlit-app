@@ -1,4 +1,4 @@
-"""에이블 캘린더: 직접 등록한 일정과 회의에서 추출한 마감일 통합."""
+"""AIVLE Ⅺ 캘린더: 직접 등록한 일정과 회의에서 추출한 마감일 통합."""
 import calendar
 from collections import Counter
 from datetime import date, datetime
