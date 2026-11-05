@@ -1,5 +1,7 @@
-"""에이블: 깔끔한 사이드바 메뉴 UI + 멀티모달 분석 + TTS."""
+"""에이블11: 깔끔한 사이드바 메뉴 UI + 멀티모달 분석 + TTS."""
 import io
+import re
+import hashlib
 import copy
 import json
 from datetime import datetime
@@ -20,27 +22,48 @@ from services.email_service import parse_recipients, send_emails
 from services.history_service import make_record, export_backup, import_backup, upsert_record
 from services.calendar_service import save_event, deadline_entries, entries_for_day, month_html
 
-st.set_page_config(page_title='에이블 | AI 업무비서', page_icon='🤖', layout='wide', initial_sidebar_state='expanded')
+st.set_page_config(page_title='에이블11 | AI 업무비서', page_icon='🤖', layout='wide', initial_sidebar_state='expanded')
 ASSET_DIR = Path(__file__).resolve().parent / 'assets'
 MAIN_IMAGE = ASSET_DIR / 'assistant_main.png'
 SIDE_IMAGE = ASSET_DIR / 'assistant_side.png'
 
-# 원본 화면 시안의 다크 모드, 간결한 여백, 둥근 모서리를 반영한 스타일
-st.markdown("""<style>
-[data-testid="stAppViewContainer"] {background: #090a0c;}
-[data-testid="stSidebar"] {background: #0c0d10; border-right: 1px solid #24262b;}
-.block-container {max-width: 1040px; padding-top: 1.35rem; padding-bottom: 3rem;}
-[data-testid="stHeader"] {background: rgba(9,10,12,.86);}
-h1, h2, h3 {letter-spacing: -0.045em;}
-h1 {font-size: 1.72rem !important;}
-h2, h3 {font-size: 1.26rem !important;}
-[data-testid="stVerticalBlockBorderWrapper"] > div {border-radius: 14px;}
-[data-testid="stFileUploader"] {border-radius: 12px;}
-[data-testid="stMetric"] {background: #121417; border: 1px solid #26282c; border-radius: 12px; padding: .8rem 1rem;}
-div.stButton > button[kind="primary"] {background: #12b8ae; color: #061313; border: 0;}
-div.stButton > button {border-radius: 10px;}
-[data-testid="stSidebar"] [role="radiogroup"] label {padding: .35rem .25rem;}
- </style>""", unsafe_allow_html=True)
+# 사용자별 테마 선택: 앱의 테마 CSS만 세션별로 변경합니다.
+if 'ui_theme' not in st.session_state:
+    st.session_state.ui_theme = '다크'
+if 'custom_mascot' not in st.session_state:
+    st.session_state.custom_mascot = None
+if 'ignored_mascot_digest' not in st.session_state:
+    st.session_state.ignored_mascot_digest = None
+
+if st.session_state.ui_theme == '라이트':
+    bg, side, panel, border, fg, muted, accent_fg = '#F7F9FC', '#FFFFFF', '#FFFFFF', '#DCE3EA', '#182332', '#596878', '#FFFFFF'
+else:
+    bg, side, panel, border, fg, muted, accent_fg = '#090A0C', '#0C0D10', '#15191D', '#30343B', '#F4F7FA', '#AAB4C0', '#061313'
+
+st.markdown(f"""<style>
+[data-testid="stAppViewContainer"] {{background: {bg}; color: {fg};}}
+[data-testid="stSidebar"] {{background: {side}; border-right: 1px solid {border}; color: {fg};}}
+[data-testid="stHeader"] {{background: {bg};}}
+.block-container {{max-width: 1040px; padding-top: 1.35rem; padding-bottom: 3rem;}}
+h1, h2, h3 {{letter-spacing: -.04em; color: {fg};}}
+h1 {{font-size: 1.72rem !important;}}
+h2, h3 {{font-size: 1.26rem !important;}}
+[data-testid="stVerticalBlockBorderWrapper"] > div {{border-radius: 14px;}}
+[data-testid="stMetric"] {{background: {panel}; border:1px solid {border}; border-radius:12px; padding:.8rem 1rem;}}
+[data-testid="stFileUploader"] {{border-radius:12px;}}
+.stApp .aivle-calendar td {{background: {panel}; border-color: {border}; color: {fg};}}
+.stApp .aivle-calendar th {{color: {muted};}}
+.stApp .aivle-calendar td.today {{border:2px solid #13BDB3; background: {panel};}}
+.stApp p, .stApp label, .stApp span {{color: inherit;}}
+div.stButton > button[kind="primary"] {{background:#109E97; color:{accent_fg}; border:0;}}
+div.stButton > button {{border-radius:10px;}}
+[data-testid="stSidebar"] [role="radiogroup"] label {{padding:.35rem .25rem;}}
+</style>""", unsafe_allow_html=True)
+
+
+def current_mascot(default_file):
+    """Only in-memory bytes, never shared between sessions."""
+    return st.session_state.custom_mascot or (str(default_file) if default_file.is_file() else None)
 
 DEFAULTS = {
     'analysis': None, 'tasks': [], 'messages': [], 'pending_email': None,
@@ -108,28 +131,64 @@ def format_problem(exc):
     return f'요청 처리 실패 ({name}). 앱 로그를 확인하세요.'
 
 
+
+def description_to_checklist(description):
+    """Convert explicit list lines to checkboxes; don't fabricate subtasks."""
+    lines = [re.sub(r'^\s*(?:[-*•]\s*|\d+[.)]\s*)', '', x).strip()
+             for x in (description or '').splitlines()]
+    lines = [x for x in lines if x]
+    return lines or ['업무 설명이 없습니다. 담당자에게 세부 내용을 확인하세요.']
+
+
+def toggle_subtask(task_id, index):
+    task = next((x for x in st.session_state.tasks if x.get('id') == task_id), None)
+    if task is None:
+        return
+    checks = list(task.get('todo_done', []))
+    lines = description_to_checklist(task.get('description'))
+    checks = (checks + [False] * len(lines))[:len(lines)]
+    checks[index] = bool(st.session_state[f'todo_{st.session_state.active_meeting_id or 'current'}_{task_id}_{index}'])
+    task['todo_done'] = checks
+    # Existing status control remains available; auto-promote to completed when all checked.
+    if all(checks):
+        task['status'] = '완료'
+    elif task.get('status') == '완료':
+        task['status'] = '진행 중'
+    elif any(checks) and task.get('status') == '미시작':
+        task['status'] = '진행 중'
+    st.session_state[f'status_{task_id}'] = task['status']
+    st.session_state.brief_audio = None
+    st.session_state.brief_audio_for = None
+    if st.session_state.active_meeting_id and st.session_state.analysis:
+        st.session_state.meeting_archive = upsert_record(
+            st.session_state.meeting_archive,
+            make_record(st.session_state.analysis, st.session_state.tasks,
+                        st.session_state.meeting_transcript,
+                        record_id=st.session_state.active_meeting_id), preserve_created=True)
+
+
 with st.sidebar:
     # 과도하게 큰 이미지를 피하고 로고/브랜드 영역만 간결하게 배치합니다.
     logo, name_col = st.columns([1, 3], vertical_alignment='center')
     with logo:
-        if SIDE_IMAGE.is_file():
-            st.image(str(SIDE_IMAGE), use_container_width=True)
+        if current_mascot(SIDE_IMAGE):
+            st.image(current_mascot(SIDE_IMAGE), use_container_width=True)
         else:
             st.markdown('🤖')
     with name_col:
-        st.markdown('**에이블**')
+        st.markdown('**에이블11**')
         st.caption('AI 개인비서 AIVLE')
     st.divider()
     page = st.radio(
         '메뉴',
         ['회의 통합 분석', '회의 기록', '캘린더', '담당 업무', '업무 브리핑', 'AI 비서 대화'],
         format_func=lambda name: {
-            '회의 통합 분석': '◈  회의 통합 분석',
-            '회의 기록': '▤  회의 기록',
-            '캘린더': '▦  캘린더',
-            '담당 업무': '☷  담당 업무',
-            '업무 브리핑': '▦  업무 브리핑',
-            'AI 비서 대화': '◯  AI 비서 대화',
+            '회의 통합 분석': '📊  회의 통합 분석',
+            '회의 기록': '📁  회의 기록',
+            '캘린더': '📅  캘린더',
+            '담당 업무': '✅  담당 업무',
+            '업무 브리핑': '📋  업무 브리핑',
+            'AI 비서 대화': '💬  AI 비서 대화',
         }[name],
         label_visibility='collapsed',
         key='page_navigation',
@@ -137,6 +196,31 @@ with st.sidebar:
     st.divider()
     st.caption(f'미완료 업무 {sum(t.get("status") != "완료" for t in st.session_state.tasks)}건 · 저장된 회의 {len(st.session_state.meeting_archive)}건')
     with st.expander('⚙️ 설정', expanded=False):
+        st.radio('화면 테마', ['다크', '라이트'], horizontal=True, key='ui_theme',
+                 help='현재 브라우저 세션의 화면 색상을 변경합니다.')
+        mascot_upload = st.file_uploader('내 에이블11 이미지 변경', type=['png','jpg','jpeg'],
+                                         key='user_mascot_upload', help='최대 3MB · 현재 세션에서만 적용')
+        if mascot_upload is not None:
+            try:
+                mascot_data = mascot_upload.getvalue()
+                if len(mascot_data) > 3_000_000:
+                    raise ValueError('이미지는 3MB 이하여야 합니다.')
+                with Image.open(io.BytesIO(mascot_data)) as check_img:
+                    if check_img.format not in ('PNG','JPEG'):
+                        raise ValueError('PNG 또는 JPG 이미지만 지원합니다.')
+                    check_img.verify()
+                mascot_digest = hashlib.sha256(mascot_data).hexdigest()
+                if mascot_digest != st.session_state.ignored_mascot_digest:
+                    st.session_state.custom_mascot = mascot_data
+                if st.session_state.custom_mascot is not None:
+                    st.caption('개인 마스코트 적용됨 (현재 세션 한정)')
+            except (OSError, ValueError, UnidentifiedImageError) as exc:
+                st.error('마스코트 이미지 오류: ' + str(exc)[:120])
+        if st.button('기본 마스코트로 되돌리기', use_container_width=True):
+            st.session_state.ignored_mascot_digest = (hashlib.sha256(st.session_state.custom_mascot).hexdigest()
+                                                      if st.session_state.custom_mascot else None)
+            st.session_state.custom_mascot = None
+            st.rerun()
         st.text_input('담당자 이름', key='owner', help='회의록의 담당자 표기와 같게 입력하세요.')
         st.caption(f'기준일 {today.isoformat()} · 한국 시간')
         st.toggle('AI 답변 자동 음성 생성', key='auto_voice', help='답변마다 TTS API를 호출하므로 비용이 추가됩니다.')
@@ -288,7 +372,7 @@ elif page == '회의 기록':
                        file_name=f'aivle_meeting_backup_{today.isoformat()}.json',
                        mime='application/json', use_container_width=True)
     with st.expander('📥 이전 백업 복원'):
-        restore_file = st.file_uploader('에이블 백업 JSON 파일 선택', type=['json'], key='history_restore_file')
+        restore_file = st.file_uploader('에이블11 백업 JSON 파일 선택', type=['json'], key='history_restore_file')
         if st.button('백업 불러오기', disabled=restore_file is None):
             try:
                 archive, messages, events = import_backup(restore_file.getvalue(), include_events=True)
@@ -458,9 +542,20 @@ elif page == '담당 업무':
                 if status_key not in st.session_state:
                     st.session_state[status_key] = task.get('status', '미시작')
                 right.selectbox('진행 상태', STATUSES, key=status_key, on_change=update_status, args=(task['id'],))
-                with st.expander('업무 설명 및 출처'):
-                    st.write(task.get('description', ''))
+                st.markdown('**세부 할 일**')
+                steps = description_to_checklist(task.get('description'))
+                task_ref = next((x for x in st.session_state.tasks if x.get('id') == task['id']), None)
+                if task_ref is not None:
+                    checked = (list(task_ref.get('todo_done', [])) + [False] * len(steps))[:len(steps)]
+                    for i, item in enumerate(steps):
+                        ck = f'todo_{st.session_state.active_meeting_id or "current"}_{task["id"]}_{i}'
+                        if ck not in st.session_state:
+                            st.session_state[ck] = checked[i]
+                        st.checkbox(item, key=ck, on_change=toggle_subtask, args=(task['id'],i))
+                    st.caption(f'완료 {sum(checked)}/{len(steps)} · 세부 할 일은 원문 설명을 줄 단위로 표시합니다.')
+                with st.expander('근거 및 업무 원문'):
                     st.caption(task.get('source_notes', ''))
+                    st.write(task.get('description',''))
         if not (ranked if show_all else mine):
             st.warning('담당 업무를 찾지 못했습니다. 설정에서 담당자 이름을 확인해 주세요.')
 
@@ -491,8 +586,8 @@ elif page == 'AI 비서 대화':
     st.caption('텍스트 또는 음성으로 질문하세요. 최근 10개 대화를 기억합니다.')
     if not st.session_state.messages:
         with st.container(border=True):
-            if MAIN_IMAGE.is_file():
-                st.image(str(MAIN_IMAGE), width=96)
+            if current_mascot(MAIN_IMAGE):
+                st.image(current_mascot(MAIN_IMAGE), width=96)
             st.markdown('**이렇게 질문해 보세요**')
             st.caption('오늘 가장 급한 업무가 뭐야? · 회의에서 확정된 사항을 알려줘 · KPI 정의서를 어떻게 시작할까?')
     for message in st.session_state.messages[-20:]:
@@ -500,7 +595,7 @@ elif page == 'AI 비서 대화':
             st.markdown(message['content'])
     audio_input = st.audio_input('음성으로 질문하기', key='chat_audio_input')
     voice_submit = st.button('녹음한 질문 실행', disabled=audio_input is None)
-    user_question = st.chat_input('에이블에게 질문을 입력하세요...')
+    user_question = st.chat_input('에이블11에게 질문을 입력하세요...')
     if voice_submit and audio_input is not None:
         try:
             with st.spinner('음성 인식 중...'):
@@ -524,7 +619,7 @@ elif page == 'AI 비서 대화':
                     brief = make_briefing(st.session_state.tasks, st.session_state.owner, today)
                     kind = '오늘의 브리핑' if ('브리핑' in question or '오늘 할 일' in question) else '통합 회의록'
                     content = brief if kind == '오늘의 브리핑' else report
-                    st.session_state.pending_email = {'to': '', 'subject': f'[에이블] {kind}', 'body': content}
+                    st.session_state.pending_email = {'to': '', 'subject': f'[에이블11] {kind}', 'body': content}
                     answer = '이메일 초안을 준비했습니다. 아래 공유 영역에서 확인 후 전송할 수 있습니다.'
                 else:
                     answer = '회의 분석을 먼저 진행한 후 이메일을 준비할 수 있습니다.'
@@ -566,7 +661,7 @@ elif page == 'AI 비서 대화':
             st.rerun()
     if st.session_state.last_chat_reply:
         with st.container(border=True):
-            st.markdown('**🔊 에이블의 답변 음성으로 듣기**')
+            st.markdown('**🔊 에이블11의 답변 음성으로 듣기**')
             st.caption('재생 버튼을 누르면 MP3를 만들고 플레이어에 표시합니다. 브라우저가 자동 재생을 차단하면 ▶ 버튼을 눌러 주세요.')
             play_reply = st.button('🔊 마지막 답변 음성 생성 / 재생', use_container_width=True)
             if play_reply:
@@ -600,7 +695,7 @@ with st.expander('✉️ 최종 회의록 / 업무 브리핑 이메일 공유', 
             report = build_meeting_report(st.session_state.analysis, st.session_state.tasks)
             brief = make_briefing(st.session_state.tasks, st.session_state.owner, today)
             content = {'최종 회의록': report, '오늘의 브리핑': brief, '둘 다': report + '\n\n---\n\n' + brief}[kind]
-            st.session_state.pending_email = {'to': '', 'subject': f'[에이블] {kind}', 'body': content}
+            st.session_state.pending_email = {'to': '', 'subject': f'[에이블11] {kind}', 'body': content}
             st.session_state.email_results = []
         if st.session_state.pending_email is not None:
             with st.form('email_confirm_form', clear_on_submit=False):
