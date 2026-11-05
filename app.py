@@ -33,8 +33,10 @@ SIDE_IMAGE = ASSET_DIR / 'assistant_side.png'
 # 고정된 다크 색상이나 CSS 기반 가짜 테마 전환은 기본 위젯과 충돌합니다.
 if 'custom_mascot' not in st.session_state:
     st.session_state.custom_mascot = None
-if 'ignored_mascot_digest' not in st.session_state:
-    st.session_state.ignored_mascot_digest = None
+if 'mascot_upload_version' not in st.session_state:
+    st.session_state.mascot_upload_version = 0
+if 'mascot_digest' not in st.session_state:
+    st.session_state.mascot_digest = None
 
 st.markdown("""<style>
 /* AIVLE Ⅺ: native Streamlit theme colors, no hardcoded light/dark surface colors. */
@@ -82,9 +84,35 @@ st.markdown("""<style>
    box-shadow: 0 2px 12px color-mix(in srgb, var(--text-color) 7%, transparent);
 }
 .st-key-home_search_row [data-testid="stChatInput"] button {color: var(--text-color) !important;}
-/* Distinct outlines in Light mode as well as Dark mode. */
-.st-key-aivle_nav [data-testid="stButton"] button {border:1px solid var(--border-color) !important;}
-.st-key-aivle_nav [data-testid="stButton"] button svg {stroke-width:2.2px;}
+/* High-contrast controls in both themes. Avoid pale --border-color for icon outlines. */
+.st-key-aivle_nav [data-testid="stButton"] button {
+   border: 2px solid color-mix(in srgb, var(--text-color) 58%, transparent) !important;
+   box-shadow: none !important;
+}
+.st-key-aivle_nav [data-testid="stButton"] button:not([kind="primary"]):not([data-testid="baseButton-primary"]) {
+   background: var(--secondary-background-color) !important;
+   color: var(--text-color) !important;
+}
+.st-key-aivle_nav [data-testid="stButton"] button:hover,
+.st-key-aivle_nav [data-testid="stButton"] button:focus-visible {
+   border-color: var(--primary-color) !important;
+   box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 22%, transparent) !important;
+}
+.st-key-aivle_nav button svg, .st-key-home_search_row [data-testid="stChatInput"] button svg {
+   color: currentColor !important; fill: currentColor !important;
+   stroke: currentColor !important; opacity: 1 !important;
+}
+.st-key-aivle_nav button svg {width: 19px !important; height: 19px !important;}
+.st-key-home_search_row [data-testid="stChatInput"] {
+   border: 2px solid color-mix(in srgb, var(--text-color) 60%, transparent) !important;
+}
+.st-key-home_search_row [data-testid="stChatInput"] button:not(:disabled) {
+   color: var(--text-color) !important; opacity: 1 !important;
+}
+/* Keep a tiny, visible custom avatar without restoring the bulky old banner. */
+.st-key-aivle_brand [data-testid="stImage"] img {border-radius: 12px; border: 2px solid color-mix(in srgb, var(--text-color) 55%, transparent); object-fit: cover;}
+.st-key-home_avatar [data-testid="stImage"] {display: flex; justify-content: center;}
+.st-key-home_avatar img {border-radius: 50%; border: 2px solid color-mix(in srgb, var(--text-color) 55%, transparent); object-fit: cover;}
 .st-key-aivle_cheer_bubble {position: relative; border-radius: 16px; background: var(--secondary-background-color);}
 .st-key-aivle_cheer_bubble:before {content: ""; position:absolute; left:-7px; top:44%; width:12px; height:12px; transform:rotate(45deg); background: var(--secondary-background-color); border-left:1px solid var(--border-color); border-bottom:1px solid var(--border-color);}
 /* The settings accordion, upload dropzone, popovers and inputs inherit the native theme. */
@@ -244,8 +272,16 @@ def show_meeting_cheer():
 
 
 with st.sidebar:
-    # 상단의 중복 이미지와 설명 문구는 제거하고 브랜드명만 간결하게 표시합니다.
-    st.markdown('**AIVLE Ⅺ**')
+    # 기본 상태는 텍스트만 표시하고, 사용자가 이미지를 지정한 경우에만 작게 노출합니다.
+    with st.container(key='aivle_brand'):
+        if st.session_state.custom_mascot is not None:
+            brand_avatar, brand_title = st.columns([1, 4], vertical_alignment='center', gap='small')
+            with brand_avatar:
+                st.image(st.session_state.custom_mascot, width=42)
+            with brand_title:
+                st.markdown('**AIVLE Ⅺ**')
+        else:
+            st.markdown('**AIVLE Ⅺ**')
     st.divider()
     # 단색 Material 아이콘은 테마와 함께 색이 바뀌어 이모지 색상 불일치를 방지합니다.
     menu_icons = [
@@ -277,29 +313,36 @@ with st.sidebar:
     st.caption(f'미완료 업무 {sum(t.get("status") != "완료" for t in st.session_state.tasks)}건 · 저장된 회의 {len(st.session_state.meeting_archive)}건')
     with st.expander('⚙️ 설정', expanded=False):
         st.caption('🎨 화면 테마: 오른쪽 위 ⋮ 메뉴 → Settings → Theme에서 Light / Dark를 선택하세요. 앱 전체 위젯에 동일하게 적용됩니다.')
-        mascot_upload = st.file_uploader('내 AIVLE Ⅺ 이미지 변경', type=['png','jpg','jpeg'],
-                                         key='user_mascot_upload', max_upload_size=3, help='최대 3MB · 현재 세션에서만 적용')
+        st.markdown('**내 마스코트**')
+        st.caption('이미지를 선택하면 사이드바 로고와 홈에 작은 아바타로 표시돼요. 기본 홈은 텍스트 중심으로 유지됩니다.')
+        mascot_upload = st.file_uploader('이미지 선택 (PNG / JPG)', type=['png', 'jpg', 'jpeg'],
+                                         key=f'user_mascot_upload_{st.session_state.mascot_upload_version}',
+                                         max_upload_size=3, help='최대 3MB · 로그인 없이 이 세션에만 저장')
         if mascot_upload is not None:
             try:
                 mascot_data = mascot_upload.getvalue()
                 if len(mascot_data) > 3_000_000:
                     raise ValueError('이미지는 3MB 이하여야 합니다.')
                 with Image.open(io.BytesIO(mascot_data)) as check_img:
-                    if check_img.format not in ('PNG','JPEG'):
+                    if check_img.format not in ('PNG', 'JPEG'):
                         raise ValueError('PNG 또는 JPG 이미지만 지원합니다.')
                     check_img.verify()
                 mascot_digest = hashlib.sha256(mascot_data).hexdigest()
-                if mascot_digest != st.session_state.ignored_mascot_digest:
+                if mascot_digest != st.session_state.mascot_digest:
                     st.session_state.custom_mascot = mascot_data
-                if st.session_state.custom_mascot is not None:
-                    st.caption('개인 마스코트 적용됨 (현재 세션 한정)')
+                    st.session_state.mascot_digest = mascot_digest
+                    st.rerun()
             except (OSError, ValueError, UnidentifiedImageError) as exc:
                 st.error('마스코트 이미지 오류: ' + str(exc)[:120])
-        if st.button('기본 마스코트로 되돌리기', use_container_width=True):
-            st.session_state.ignored_mascot_digest = (hashlib.sha256(st.session_state.custom_mascot).hexdigest()
-                                                      if st.session_state.custom_mascot else None)
-            st.session_state.custom_mascot = None
-            st.rerun()
+        if st.session_state.custom_mascot is not None:
+            st.image(st.session_state.custom_mascot, width=100, caption='현재 적용된 개인 마스코트')
+            if st.button('기본 이미지 설정으로 복원', key='reset_personal_mascot', use_container_width=True):
+                st.session_state.custom_mascot = None
+                st.session_state.mascot_digest = None
+                st.session_state.mascot_upload_version += 1
+                st.rerun()
+        else:
+            st.caption('현재 기본 로고(텍스트)를 사용 중입니다.')
         st.text_input('담당자 이름', key='owner', help='회의록의 담당자 표기와 같게 입력하세요.')
         st.caption(f'기준일 {today.isoformat()} · 한국 시간')
         st.toggle('AI 답변 자동 음성 생성', key='auto_voice', help='답변마다 TTS API를 호출하므로 비용이 추가됩니다.')
@@ -328,6 +371,10 @@ page_kicker = {
 if page == '홈':
     with st.container(key='home_hero'):
         st.markdown('<h1 class="aivle-home-wordmark">AIVLE <span>Ⅺ</span></h1>', unsafe_allow_html=True)
+        # 기본 홈은 텍스트 중심. 개인화한 경우에만 작게 아바타를 보여줘 실제 변경 결과를 확인할 수 있습니다.
+        if st.session_state.custom_mascot is not None:
+            with st.container(key='home_avatar'):
+                st.image(st.session_state.custom_mascot, width=58)
         st.markdown('<p class="home_tagline">회의부터 일정까지, 무엇이든 도와드릴게요.</p>', unsafe_allow_html=True)
         show_meeting_cheer()
 else:
@@ -345,7 +392,6 @@ if page == '홈':
                        'mpeg', 'mpga', 'wav', 'webm'],
             accept_audio=True, max_upload_size=24,
         )
-    st.caption('＋ 회의 자료 첨부 · 🎙️ 음성 질문 · 텍스트 입력을 한곳에서 이용하세요.')
     home_question = None
     if home_submission is not None:
         submitted_text = (home_submission.text or '').strip()
@@ -453,7 +499,7 @@ if page == '홈':
         with st.expander('최종 회의록 텍스트 보기'):
             st.markdown(report)
     else:
-        st.caption('회의록을 분석하려면 검색창의 ＋ 버튼으로 자료를 첨부해 보내주세요.')
+        pass
 
 elif page == '회의록':
     st.caption('🗂️ 회의별 핵심 요약과 담당 업무를 확인하고, 필요할 때 다시 열 수 있습니다.')
@@ -721,9 +767,8 @@ elif page == '브리핑':
             st.audio(st.session_state.brief_audio, format='audio/mp3', autoplay=listen)
 
 if page == '홈':
-    st.divider()
-    st.markdown('**💬 대화**')
-    st.caption('최근 10개 대화를 기억해요. 질문은 홈 상단 검색창에 입력하세요.')
+    if st.session_state.messages:
+        st.divider()
     for message in st.session_state.messages[-20:]:
         with st.chat_message(message['role']):
             st.markdown(message['content'])
@@ -807,54 +852,55 @@ if page == '홈':
             else:
                 st.caption('아직 생성된 음성 파일이 없습니다. 위 버튼을 눌러 주세요.')
 
-# 이메일은 AI와 독립적으로 처리하며 반드시 사용자 최종 확인이 있어야 발송합니다.
-st.divider()
-with st.expander('✉️ 회의록·브리핑 이메일 공유', expanded=bool(st.session_state.pending_email)):
-    if not st.session_state.analysis:
-        st.info('회의 분석이 완료되면 이메일 공유가 활성화됩니다.')
-    else:
-        kind = st.radio('공유할 문서', ['최종 회의록', '오늘의 브리핑', '둘 다'], horizontal=True)
-        if st.button('이메일 초안 작성'):
-            report = build_meeting_report(st.session_state.analysis, st.session_state.tasks)
-            brief = make_briefing(st.session_state.tasks, st.session_state.owner, today)
-            content = {'최종 회의록': report, '오늘의 브리핑': brief, '둘 다': report + '\n\n---\n\n' + brief}[kind]
-            st.session_state.pending_email = {'to': '', 'subject': f'[AIVLE Ⅺ] {kind}', 'body': content}
-            st.session_state.email_results = []
-        if st.session_state.pending_email is not None:
-            with st.form('email_confirm_form', clear_on_submit=False):
-                to = st.text_area('받는 사람 이메일 주소 (여러 명 가능)',
-                                  value=st.session_state.pending_email.get('to', ''), height=100,
-                                  help='쉼표, 세미콜론 또는 줄바꿈으로 구분하세요. 최대 10개, 각각 개별 발송합니다.')
-                subject = st.text_input('제목', value=st.session_state.pending_email.get('subject', ''))
-                body = st.text_area('본문 (수정 가능)', value=st.session_state.pending_email.get('body', ''), height=220)
-                confirm = st.form_submit_button('✅ 입력한 모든 수신자에게 발송 확인', type='primary')
-            if confirm:
-                st.session_state.pending_email = {'to': to, 'subject': subject, 'body': body}
-                try:
-                    recipients = parse_recipients(to)
-                    if not subject.strip() or not body.strip():
-                        raise ValueError('제목과 본문을 입력해 주세요.')
-                    with st.spinner(f'{len(recipients)}명에게 개별 이메일을 보내는 중...'):
-                        results = send_emails(recipients, subject, body)
-                    st.session_state.email_results = results
-                    success = [x for x in results if x['status'] == 'success']
-                    failed = [x for x in results if x['status'] != 'success']
-                    if success:
-                        st.success(f'Gmail 서버 접수: {len(success)}건 / {len(recipients)}건 (실제 배달은 수신 서버 상태에 따라 다를 수 있습니다)')
-                    if failed:
-                        st.error(f'발송 실패: {len(failed)}건. 아래 결과를 확인하고 실패 주소만 재시도하세요.')
-                    else:
-                        st.session_state.pending_email = None
-                except ValueError as exc:
-                    st.error(str(exc))
-            if st.button('초안 취소'):
-                st.session_state.pending_email = None
+# 이메일 기능은 삭제하지 않고 접힌 사이드바 메뉴로 이동합니다.
+with st.sidebar:
+    # 이메일은 AI와 독립적으로 처리하며 반드시 사용자 최종 확인이 있어야 발송합니다.
+    with st.expander('✉️ 이메일 공유', expanded=bool(st.session_state.pending_email)):
+        if not st.session_state.analysis:
+            st.info('회의 분석이 완료되면 이메일 공유가 활성화됩니다.')
+        else:
+            kind = st.radio('공유할 문서', ['최종 회의록', '오늘의 브리핑', '둘 다'], horizontal=True)
+            if st.button('이메일 초안 작성'):
+                report = build_meeting_report(st.session_state.analysis, st.session_state.tasks)
+                brief = make_briefing(st.session_state.tasks, st.session_state.owner, today)
+                content = {'최종 회의록': report, '오늘의 브리핑': brief, '둘 다': report + '\n\n---\n\n' + brief}[kind]
+                st.session_state.pending_email = {'to': '', 'subject': f'[AIVLE Ⅺ] {kind}', 'body': content}
                 st.session_state.email_results = []
-                st.rerun()
-    if st.session_state.email_results:
-        st.markdown('**수신자별 전송 결과**')
-        for item in st.session_state.email_results:
-            if item['status'] == 'success':
-                st.caption(f"✓ {item['to']} · Gmail 접수")
-            else:
-                st.warning(f"{item['to']} · {item['error']}")
+            if st.session_state.pending_email is not None:
+                with st.form('email_confirm_form', clear_on_submit=False):
+                    to = st.text_area('받는 사람 이메일 주소 (여러 명 가능)',
+                                      value=st.session_state.pending_email.get('to', ''), height=100,
+                                      help='쉼표, 세미콜론 또는 줄바꿈으로 구분하세요. 최대 10개, 각각 개별 발송합니다.')
+                    subject = st.text_input('제목', value=st.session_state.pending_email.get('subject', ''))
+                    body = st.text_area('본문 (수정 가능)', value=st.session_state.pending_email.get('body', ''), height=220)
+                    confirm = st.form_submit_button('✅ 입력한 모든 수신자에게 발송 확인', type='primary')
+                if confirm:
+                    st.session_state.pending_email = {'to': to, 'subject': subject, 'body': body}
+                    try:
+                        recipients = parse_recipients(to)
+                        if not subject.strip() or not body.strip():
+                            raise ValueError('제목과 본문을 입력해 주세요.')
+                        with st.spinner(f'{len(recipients)}명에게 개별 이메일을 보내는 중...'):
+                            results = send_emails(recipients, subject, body)
+                        st.session_state.email_results = results
+                        success = [x for x in results if x['status'] == 'success']
+                        failed = [x for x in results if x['status'] != 'success']
+                        if success:
+                            st.success(f'Gmail 서버 접수: {len(success)}건 / {len(recipients)}건 (실제 배달은 수신 서버 상태에 따라 다를 수 있습니다)')
+                        if failed:
+                            st.error(f'발송 실패: {len(failed)}건. 아래 결과를 확인하고 실패 주소만 재시도하세요.')
+                        else:
+                            st.session_state.pending_email = None
+                    except ValueError as exc:
+                        st.error(str(exc))
+                if st.button('초안 취소'):
+                    st.session_state.pending_email = None
+                    st.session_state.email_results = []
+                    st.rerun()
+        if st.session_state.email_results:
+            st.markdown('**수신자별 전송 결과**')
+            for item in st.session_state.email_results:
+                if item['status'] == 'success':
+                    st.caption(f"✓ {item['to']} · Gmail 접수")
+                else:
+                    st.warning(f"{item['to']} · {item['error']}")
