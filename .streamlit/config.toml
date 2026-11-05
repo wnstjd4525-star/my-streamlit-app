@@ -1,28 +1,28 @@
 [theme]
-base = "dark"
-primaryColor = "#109E97"
+base = "light"
+primaryColor = "#202020"
 font = "sans serif"
 
 [theme.light]
-primaryColor = "#109E97"
+primaryColor = "#202020"
 backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F5F7FA"
-textColor = "#000000"
-borderColor = "#DCE3EA"
+secondaryBackgroundColor = "#F7F7F7"
+textColor = "#111111"
+borderColor = "#A3A3A3"
 
 [theme.light.sidebar]
 backgroundColor = "#FFFFFF"
-secondaryBackgroundColor = "#F5F7FA"
-textColor = "#182332"
+secondaryBackgroundColor = "#F7F7F7"
+textColor = "#111111"
 
 [theme.dark]
-primaryColor = "#109E97"
-backgroundColor = "#000000"
-secondaryBackgroundColor = "#171A1F"
-textColor = "#FFFFFF"
-borderColor = "#30343B"
+primaryColor = "#EDEDED"
+backgroundColor = "#0C0C0C"
+secondaryBackgroundColor = "#191919"
+textColor = "#F5F5F5"
+borderColor = "#737373"
 
 [theme.dark.sidebar]
-backgroundColor = "#0C0D10"
-secondaryBackgroundColor = "#171A1F"
-textColor = "#F4F7FA"
+backgroundColor = "#0C0C0C"
+secondaryBackgroundColor = "#191919"
+textColor = "#F5F5F5"
