@@ -5,9 +5,9 @@ font = "sans serif"
 
 [theme.light]
 primaryColor = "#109E97"
-backgroundColor = "#F7F9FC"
+backgroundColor = "#FFFFFF"
 secondaryBackgroundColor = "#F5F7FA"
-textColor = "#182332"
+textColor = "#000000"
 borderColor = "#DCE3EA"
 
 [theme.light.sidebar]
@@ -17,9 +17,9 @@ textColor = "#182332"
 
 [theme.dark]
 primaryColor = "#109E97"
-backgroundColor = "#090A0C"
+backgroundColor = "#000000"
 secondaryBackgroundColor = "#171A1F"
-textColor = "#F4F7FA"
+textColor = "#FFFFFF"
 borderColor = "#30343B"
 
 [theme.dark.sidebar]
