@@ -79,7 +79,8 @@ st.markdown("""<style>
 .aivle-calendar .day-number {font-weight: 650; margin-bottom: 8px;}
 .aivle-calendar .event-dot, .aivle-calendar .task-dot {display: block; font-size: .69rem;
     margin-top: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;}
-.aivle-calendar .event-dot {color: var(--text-color);}
+.aivle-calendar .event-dot {color: var(--text-color); background: color-mix(in srgb, var(--primary-color) 12%, transparent); border-radius: 4px; padding: 2px 4px;}
+.aivle-calendar .more-events {display: block; color: var(--text-color); opacity: .75; font-size: .68rem; margin-top: 3px;}
 .aivle-calendar .task-dot {color: var(--primary-color); font-weight: 600;}
 @media (max-width: 640px) {
     .aivle-calendar td {height: 70px; padding: 5px;}
@@ -503,7 +504,7 @@ elif page == '캘린더':
     from datetime import date as calendar_date
     import calendar as calendar_lib
 
-    st.caption('회의에서 추출된 업무 마감일과 직접 등록한 일정을 한눈에 확인합니다. Google Calendar와는 연결되지 않습니다.')
+    st.caption('➕ 아래에서 직접 일정을 등록하세요. 저장한 일정 제목이 날짜 칸에 표시됩니다. Google Calendar와는 연결되지 않습니다.')
     deadlines = deadline_entries(
         st.session_state.meeting_archive,
         st.session_state.analysis,
@@ -514,6 +515,35 @@ elif page == '캘린더':
     base = today.year * 12 + today.month - 1 + st.session_state.calendar_offset
     year, zero_month = divmod(base, 12)
     month = zero_month + 1
+    pending_day = st.session_state.pop('cal_pending_date', None)
+    if pending_day is not None:
+        st.session_state.cal_day_select = pending_day
+    chosen = st.date_input('일정 날짜 선택 및 상세 확인', value=today, key='cal_day_select')
+    if st.session_state.pop('calendar_notice', None):
+        st.success('일정이 등록됐습니다. 아래 달력에 제목이 표시됩니다.')
+    st.subheader('➕ 일정 직접 추가')
+    with st.form('calendar_add_form', clear_on_submit=True):
+        add_title = st.text_input('일정 제목', max_chars=120, placeholder='예: 프로젝트 팀 회의')
+        add_day = st.date_input('날짜', value=chosen)
+        add_timed = st.checkbox('시작 시간 지정', value=False)
+        add_time = st.time_input('시작 시간 (시간 미지정 시 무시)', value=datetime.now(ZoneInfo('Asia/Seoul')).time())
+        add_note = st.text_area('메모 (선택)', max_chars=2000)
+        add_submit = st.form_submit_button('➕ 일정 저장', type='primary', use_container_width=True)
+    if add_submit:
+        try:
+            st.session_state.calendar_events = save_event(
+                st.session_state.calendar_events,
+                {'title': add_title, 'date': add_day.isoformat(),
+                 'time': add_time.strftime('%H:%M') if add_timed else '', 'note': add_note}
+            )
+            # 선택한 날짜와 월간 달력의 표시 월을 새 일정이 있는 달로 이동합니다.
+            st.session_state.calendar_offset = (add_day.year - today.year) * 12 + add_day.month - today.month
+            st.session_state.cal_pending_date = add_day
+            st.session_state.calendar_notice = f'✅ {add_day.isoformat()} · {add_title.strip()} 일정이 등록됐습니다.'
+            st.rerun()
+        except ValueError as exc:
+            st.error(str(exc))
+    st.divider()
     left, center, right = st.columns([1, 4, 1], vertical_alignment='center')
     with left:
         if st.button('◀ 이전', key='cal_prev', use_container_width=True):
@@ -526,10 +556,9 @@ elif page == '캘린더':
             st.session_state.calendar_offset += 1
             st.rerun()
     st.markdown(month_html(year, month, events, deadlines, today), unsafe_allow_html=True)
-    st.caption('파란색: 직접 등록 일정 · 노란색: 미완료 업무 마감 · 날짜별 상세는 아래에서 선택')
-    chosen = st.date_input('확인할 날짜', value=today, key='cal_day_select')
+    st.caption('🗓 직접 등록 일정 제목은 날짜 칸에 표시되며, 📌 표시는 업무 마감일입니다. 날짜를 선택하면 아래에서 상세 내용을 확인할 수 있습니다.')
     day_entries = entries_for_day(events, deadlines, chosen)
-    st.subheader(f'{chosen.isoformat()} 일정 ({len(day_entries)}건)')
+    st.subheader(f'📆 {chosen.isoformat()} 일정 ({len(day_entries)}건)')
     if not day_entries:
         st.info('선택한 날짜에 일정이 없습니다.')
     for entry in day_entries:
@@ -542,25 +571,6 @@ elif page == '캘린더':
                 st.markdown(f"**🗓️ {entry.get('time','') or '종일'} · {entry['title']}**")
                 if entry.get('note'):
                     st.caption(entry['note'])
-    with st.expander('➕ 새 일정 추가', expanded=False):
-        with st.form('calendar_add_form', clear_on_submit=True):
-            add_title = st.text_input('일정 제목', max_chars=120)
-            add_day = st.date_input('일정 날짜', value=chosen)
-            add_timed = st.checkbox('시간 지정', value=False)
-            add_time = st.time_input('시작 시간', value=datetime.now(ZoneInfo('Asia/Seoul')).time())
-            add_note = st.text_area('메모 (선택)', max_chars=2000)
-            add_submit = st.form_submit_button('일정 저장', type='primary')
-        if add_submit:
-            try:
-                st.session_state.calendar_events = save_event(
-                    st.session_state.calendar_events,
-                    {'title':add_title,'date':add_day.isoformat(),
-                     'time':add_time.strftime('%H:%M') if add_timed else '', 'note':add_note}
-                )
-                st.success('일정이 등록되었습니다.')
-                st.rerun()
-            except ValueError as exc:
-                st.error(str(exc))
     if events:
         with st.expander('✏️ 일정 수정·삭제'):
             chosen_id = st.selectbox('편집할 일정', options=[e['id'] for e in events],
