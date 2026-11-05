@@ -77,39 +77,39 @@ st.markdown("""<style>
 .st-key-aivle_fortune_line .aivle-fortune-title {font-size: .78rem; font-weight: 650; margin: 0 0 .25rem; color: var(--primary-color);}
 .st-key-aivle_fortune_line p {font-size: .88rem; text-align:center; margin: 0;}
 @media (max-width: 640px) {.st-key-home_hero {margin-top: 2rem;} .st-key-home_hero .aivle-home-wordmark {font-size:2.65rem !important;}}
-/* Search input: ONE understated outline, not nested borders/outlines. */
+/* One visible outline; exact black/white inversion from Streamlit's theme vars. */
 .st-key-home_search_row {max-width:740px;margin:0 auto 1.2rem;}
-/* The internal wrapper owns the single visible perimeter. */
 .st-key-home_search_row [data-testid="stChatInput"] {
     border:0 !important;outline:0 !important;
     box-shadow:none !important;background:transparent !important;
 }
 .st-key-home_search_row [data-testid="stChatInput"] > div:first-child {
-    border:1px solid color-mix(in srgb, var(--text-color) 42%, transparent) !important;
-    border-radius:27px !important;
-    outline:none !important;
-    box-shadow:0 2px 7px color-mix(in srgb, var(--text-color) 5%, transparent) !important;
-    background:var(--secondary-background-color) !important;
-    overflow:visible;
+    border:1.5px solid var(--text-color) !important;
+    border-radius:28px !important;outline:none !important;
+    box-shadow:none !important;background:var(--background-color) !important;
 }
 .st-key-home_search_row [data-testid="stChatInput"] > div:first-child:focus-within {
     border-color:var(--primary-color) !important;
-    box-shadow:0 0 0 2px color-mix(in srgb, var(--primary-color) 13%, transparent) !important;
+    box-shadow:0 0 0 2px color-mix(in srgb,var(--primary-color) 15%,transparent) !important;
 }
 .st-key-home_search_row [data-testid="stChatInput"] textarea {
     background:transparent !important;color:var(--text-color) !important;
+    caret-color:var(--text-color) !important;
+}
+.st-key-home_search_row [data-testid="stChatInput"] textarea::placeholder {
+    color:var(--text-color) !important;opacity:.60 !important;
 }
 .st-key-home_search_row [data-testid="stChatInput"] button,
 .st-key-home_search_row [data-testid="stChatInput"] [role="button"] {
-    border:0 !important;outline:0 !important;
-    border-radius:50% !important;box-shadow:none !important;
-    background:transparent !important;color:var(--text-color) !important;
+    border:0 !important;outline:0 !important;border-radius:50% !important;
+    box-shadow:none !important;background:transparent !important;
+    color:var(--text-color) !important;opacity:1 !important;
     min-width:34px !important;min-height:34px !important;
     width:34px !important;height:34px !important;padding:6px !important;
 }
 .st-key-home_search_row [data-testid="stChatInput"] button:hover:not(:disabled),
 .st-key-home_search_row [data-testid="stChatInput"] [role="button"]:hover {
-    background:color-mix(in srgb, var(--text-color) 9%, transparent) !important;
+    background:color-mix(in srgb,var(--text-color) 11%,transparent) !important;
 }
 .st-key-home_search_row [data-testid="stChatInput"] button:focus-visible,
 .st-key-home_search_row [data-testid="stChatInput"] [role="button"]:focus-visible {
