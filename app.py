@@ -45,7 +45,7 @@ st.markdown("""<style>
 .stApp h1 {font-size: 1.72rem !important;}
 .stApp h2, .stApp h3 {font-size: 1.26rem !important;}
 [data-testid="stVerticalBlockBorderWrapper"] > div {border-radius: 14px;}
-[data-testid="stMetric"] {border: 1px solid var(--border-color, #8995a3); border-radius: 12px; padding: .8rem 1rem;}
+[data-testid="stMetric"] {border: 1px solid var(--st-border-color, #8995a3); border-radius: 12px; padding: .8rem 1rem;}
 /* Only the navigation group: don't accidentally restyle uploader, settings or other buttons. */
 [data-testid="stSidebar"] .st-key-aivle_nav [data-testid="stVerticalBlock"] {gap: .12rem !important;}
 [data-testid="stSidebar"] .st-key-aivle_nav [data-testid="stButton"] {margin: 0 !important;}
@@ -71,67 +71,82 @@ st.markdown("""<style>
 /* Center the brand and mascot in a restrained homepage hero. */
 .st-key-home_hero {max-width: 740px; margin: 7vh auto 1.4rem; padding: .3rem .2rem; text-align: center;}
 .st-key-home_hero .aivle-home-wordmark {text-align:center !important; font-size: clamp(2.7rem, 6vw, 4.2rem) !important; font-weight: 720; letter-spacing: -.065em; margin: .2rem 0 1rem; line-height: 1.12;}
-.st-key-home_hero .aivle-home-wordmark span {color: var(--primary-color);}
-.st-key-home_hero .home_tagline {text-align:center; color: var(--text-color); opacity: .76; margin: 0 0 1.3rem;}
-.st-key-aivle_fortune_line {text-align:center; max-width: 540px; margin: 0 auto .8rem; padding: .65rem 1rem; border-radius: 18px; border: 1px solid var(--border-color); background: var(--secondary-background-color);}
-.st-key-aivle_fortune_line .aivle-fortune-title {font-size: .78rem; font-weight: 650; margin: 0 0 .25rem; color: var(--primary-color);}
+.st-key-home_hero .aivle-home-wordmark span {color: var(--st-primary-color);}
+.st-key-home_hero .home_tagline {text-align:center; color: var(--st-text-color); opacity: .76; margin: 0 0 1.3rem;}
+.st-key-aivle_fortune_line {text-align:center; max-width: 540px; margin: 0 auto .8rem; padding: .65rem 1rem; border-radius: 18px; border: 1px solid var(--st-border-color); background: var(--st-secondary-background-color);}
+.st-key-aivle_fortune_line .aivle-fortune-title {font-size: .78rem; font-weight: 650; margin: 0 0 .25rem; color: var(--st-primary-color);}
 .st-key-aivle_fortune_line p {font-size: .88rem; text-align:center; margin: 0;}
 @media (max-width: 640px) {.st-key-home_hero {margin-top: 2rem;} .st-key-home_hero .aivle-home-wordmark {font-size:2.65rem !important;}}
-/* One visible outline; exact black/white inversion from Streamlit's theme vars. */
+/* The real Streamlit theme CSS vars have the --st- prefix. */
 .st-key-home_search_row {max-width:740px;margin:0 auto 1.2rem;}
 .st-key-home_search_row [data-testid="stChatInput"] {
     border:0 !important;outline:0 !important;
-    box-shadow:none !important;background:transparent !important;
+    background:transparent !important;box-shadow:none !important;
 }
 .st-key-home_search_row [data-testid="stChatInput"] > div:first-child {
-    border:1.5px solid var(--text-color) !important;
-    border-radius:28px !important;outline:none !important;
-    box-shadow:none !important;background:var(--background-color) !important;
+    border:1.5px solid var(--st-text-color, #182332) !important;
+    border-radius:28px !important;
+    outline:0 !important;
+    background:var(--st-background-color, #fff) !important;
+    box-shadow:none !important;
 }
 .st-key-home_search_row [data-testid="stChatInput"] > div:first-child:focus-within {
-    border-color:var(--primary-color) !important;
-    box-shadow:0 0 0 2px color-mix(in srgb,var(--primary-color) 15%,transparent) !important;
+    border-color:var(--st-primary-color, #109E97) !important;
+    box-shadow:0 0 0 2px color-mix(in srgb,var(--st-primary-color, #109E97) 16%,transparent) !important;
 }
 .st-key-home_search_row [data-testid="stChatInput"] textarea {
-    background:transparent !important;color:var(--text-color) !important;
-    caret-color:var(--text-color) !important;
+    background:transparent !important;
+    color:var(--st-text-color, #182332) !important;
+    caret-color:var(--st-text-color, #182332) !important;
 }
 .st-key-home_search_row [data-testid="stChatInput"] textarea::placeholder {
-    color:var(--text-color) !important;opacity:.60 !important;
+    color:var(--st-text-color, #182332) !important; opacity:.65 !important;
 }
+/* No square outlines. Make all plus, mic and submit icons clearly visible. */
 .st-key-home_search_row [data-testid="stChatInput"] button,
 .st-key-home_search_row [data-testid="stChatInput"] [role="button"] {
-    border:0 !important;outline:0 !important;border-radius:50% !important;
-    box-shadow:none !important;background:transparent !important;
-    color:var(--text-color) !important;opacity:1 !important;
-    min-width:34px !important;min-height:34px !important;
-    width:34px !important;height:34px !important;padding:6px !important;
+    border:0 !important;outline:0 !important;
+    border-radius:50% !important;
+    background:transparent !important;box-shadow:none !important;
+    color:var(--st-text-color, #182332) !important;
+    -webkit-text-fill-color:var(--st-text-color, #182332) !important;
+    opacity:1 !important;
+    min-width:36px !important;min-height:36px !important;
+    width:36px !important;height:36px !important;padding:7px !important;
+}
+.st-key-home_search_row [data-testid="stChatInput"] button svg,
+.st-key-home_search_row [data-testid="stChatInput"] [role="button"] svg,
+.st-key-home_search_row [data-testid="stChatInput"] [data-testid="stIconMaterial"],
+.st-key-home_search_row [data-testid="stChatInput"] .material-symbols-rounded {
+    width:20px !important;height:20px !important;
+    font-size:21px !important;
+    color:var(--st-text-color, #182332) !important;
+    opacity:1 !important;visibility:visible !important;
+    -webkit-text-fill-color:var(--st-text-color, #182332) !important;
 }
 .st-key-home_search_row [data-testid="stChatInput"] button:hover:not(:disabled),
 .st-key-home_search_row [data-testid="stChatInput"] [role="button"]:hover {
-    background:color-mix(in srgb,var(--text-color) 11%,transparent) !important;
+    background:color-mix(in srgb,var(--st-text-color, #182332) 10%,transparent) !important;
 }
-.st-key-home_search_row [data-testid="stChatInput"] button:focus-visible,
-.st-key-home_search_row [data-testid="stChatInput"] [role="button"]:focus-visible {
-    outline:2px solid var(--primary-color) !important;outline-offset:2px !important;
+.st-key-home_search_row [data-testid="stChatInput"] button:focus-visible {
+    outline:2px solid var(--st-primary-color, #109E97) !important;
+    outline-offset:2px !important;
 }
-.st-key-home_search_row [data-testid="stChatInput"] button:disabled {opacity:.38 !important;}
-.st-key-home_search_row [data-testid="stChatInput"] button svg {
-    width:19px !important;height:19px !important;color:inherit !important;
-}
+/* Unavailable submit stays visible, but slightly lighter than active buttons. */
+.st-key-home_search_row [data-testid="stChatInput"] button:disabled {opacity:.55 !important;}
 /* High contrast for navigation icon and border; no global svg fill overrides. */
 .st-key-aivle_nav [data-testid="stButton"] button {
-    border: 1.5px solid color-mix(in srgb, var(--text-color) 48%, transparent) !important;
+    border: 1.5px solid color-mix(in srgb, var(--st-text-color) 48%, transparent) !important;
     box-shadow: none !important;
 }
 .st-key-aivle_nav [data-testid="stButton"] button:not([kind="primary"]):not([data-testid="baseButton-primary"]) {
-    background: var(--secondary-background-color) !important;
-    color: var(--text-color) !important;
+    background: var(--st-secondary-background-color) !important;
+    color: var(--st-text-color) !important;
 }
 .st-key-aivle_nav [data-testid="stButton"] button:hover,
 .st-key-aivle_nav [data-testid="stButton"] button:focus-visible {
-    border-color: var(--primary-color) !important;
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-color) 20%, transparent) !important;
+    border-color: var(--st-primary-color) !important;
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--st-primary-color) 20%, transparent) !important;
 }
 .st-key-aivle_nav button svg {
     width: 19px !important;
@@ -140,33 +155,118 @@ st.markdown("""<style>
     opacity: 1 !important;
 }
 /* Keep a tiny, visible custom avatar without restoring the bulky old banner. */
-.st-key-aivle_brand [data-testid="stImage"] img {border-radius: 12px; border: 2px solid color-mix(in srgb, var(--text-color) 55%, transparent); object-fit: cover;}
+.st-key-aivle_brand [data-testid="stImage"] img {border-radius: 12px; border: 2px solid color-mix(in srgb, var(--st-text-color) 55%, transparent); object-fit: cover;}
 .st-key-home_avatar [data-testid="stImage"] {display: flex; justify-content: center;}
-.st-key-home_avatar img {border-radius: 50%; border: 2px solid color-mix(in srgb, var(--text-color) 55%, transparent); object-fit: cover;}
-.st-key-aivle_cheer_bubble {position: relative; border-radius: 16px; background: var(--secondary-background-color);}
-.st-key-aivle_cheer_bubble:before {content: ""; position:absolute; left:-7px; top:44%; width:12px; height:12px; transform:rotate(45deg); background: var(--secondary-background-color); border-left:1px solid var(--border-color); border-bottom:1px solid var(--border-color);}
+.st-key-home_avatar img {border-radius: 50%; border: 2px solid color-mix(in srgb, var(--st-text-color) 55%, transparent); object-fit: cover;}
+.st-key-aivle_cheer_bubble {position: relative; border-radius: 16px; background: var(--st-secondary-background-color);}
+.st-key-aivle_cheer_bubble:before {content: ""; position:absolute; left:-7px; top:44%; width:12px; height:12px; transform:rotate(45deg); background: var(--st-secondary-background-color); border-left:1px solid var(--st-border-color); border-bottom:1px solid var(--st-border-color);}
 /* The settings accordion, upload dropzone, popovers and inputs inherit the native theme. */
 /* Calendar is custom HTML, so it must explicitly use native theme variables. */
 .aivle-calendar {width: 100%; overflow-x: auto;}
 .aivle-calendar table {width: 100%; min-width: 460px; table-layout: fixed;
     border-collapse: separate; border-spacing: 4px;}
 .aivle-calendar th {text-align: center; font-size: .8rem;
-    color: var(--text-color); opacity: .72; padding: 6px;}
+    color: var(--st-text-color); opacity: .72; padding: 6px;}
 .aivle-calendar td {height: 84px; vertical-align: top; padding: 8px;
-    border: 1px solid var(--border-color, #8995a3); border-radius: 9px;
-    background: var(--secondary-background-color); color: var(--text-color);}
+    border: 1px solid var(--st-border-color, #8995a3); border-radius: 9px;
+    background: var(--st-secondary-background-color); color: var(--st-text-color);}
 .aivle-calendar td.other {opacity: .4;}
-.aivle-calendar td.today {outline: 2px solid var(--primary-color); outline-offset: -2px;}
+.aivle-calendar td.today {outline: 2px solid var(--st-primary-color); outline-offset: -2px;}
 .aivle-calendar .day-number {font-weight: 650; margin-bottom: 8px;}
 .aivle-calendar .event-dot, .aivle-calendar .task-dot {display: block; font-size: .69rem;
     margin-top: 3px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;}
-.aivle-calendar .event-dot {color: var(--text-color); background: color-mix(in srgb, var(--primary-color) 12%, transparent); border-radius: 4px; padding: 2px 4px;}
-.aivle-calendar .more-events {display: block; color: var(--text-color); opacity: .75; font-size: .68rem; margin-top: 3px;}
-.aivle-calendar .task-dot {color: var(--primary-color); font-weight: 600;}
+.aivle-calendar .event-dot {color: var(--st-text-color); background: color-mix(in srgb, var(--st-primary-color) 12%, transparent); border-radius: 4px; padding: 2px 4px;}
+.aivle-calendar .more-events {display: block; color: var(--st-text-color); opacity: .75; font-size: .68rem; margin-top: 3px;}
+.aivle-calendar .task-dot {color: var(--st-primary-color); font-weight: 600;}
 @media (max-width: 640px) {
     .aivle-calendar td {height: 70px; padding: 5px;}
     .block-container {padding-top: 1rem;}
 }
+
+/* ==== AIVLE XI MONOCHROME DESIGN SYSTEM ==== */
+/* Theme-native variables: Light = dark ink on white; Dark = white ink on black. */
+.stApp {color:var(--st-text-color) !important;}
+.st-key-home_hero .aivle-home-wordmark span,
+.st-key-aivle_fortune_line .aivle-fortune-title {color:var(--st-text-color) !important;}
+.st-key-aivle_fortune_line {background:transparent !important; border:1px solid var(--st-border-color) !important; box-shadow:none !important;}
+[data-testid="stMetric"], [data-testid="stVerticalBlockBorderWrapper"] {box-shadow:none !important;}
+[data-testid="stMetric"] {border:1px solid var(--st-border-color) !important;}
+/* Sidebar: natural left-aligned monochrome icon and text, no bright tiles. */
+[data-testid="stSidebar"] .st-key-aivle_nav button {
+  background:transparent !important; color:var(--st-text-color) !important;
+  border:1px solid var(--st-border-color) !important;
+  box-shadow:none !important; border-radius:11px !important;
+}
+[data-testid="stSidebar"] .st-key-aivle_nav button[kind="primary"],
+[data-testid="stSidebar"] .st-key-aivle_nav button[data-testid="baseButton-primary"] {
+  color:var(--st-background-color) !important;
+  background:var(--st-text-color) !important;
+  border-color:var(--st-text-color) !important;
+}
+[data-testid="stSidebar"] .st-key-aivle_nav button svg,
+[data-testid="stSidebar"] .st-key-aivle_nav button [data-testid="stIconMaterial"] {
+  color:inherit !important; opacity:1 !important;
+}
+[data-testid="stSidebar"] .st-key-aivle_nav button:hover:not([kind="primary"]) {
+  background:var(--st-secondary-background-color) !important;
+  border-color:var(--st-text-color) !important;
+}
+/* Unified input: exactly one visible oval outline, no nested borders. */
+.st-key-home_search_row [data-testid="stChatInput"] {
+  border:0 !important;outline:0 !important;background:transparent !important;box-shadow:none !important;
+}
+.st-key-home_search_row [data-testid="stChatInput"] > div:first-child {
+  background:var(--st-background-color) !important;
+  border:1.5px solid var(--st-text-color) !important;
+  border-radius:28px !important;
+  outline:0 !important;box-shadow:none !important;
+}
+.st-key-home_search_row [data-testid="stChatInput"] > div:first-child:focus-within {
+  border-color:var(--st-text-color) !important;
+  box-shadow:0 0 0 1px var(--st-text-color) !important;
+}
+.st-key-home_search_row [data-testid="stChatInput"] textarea {
+  background:transparent !important;color:var(--st-text-color) !important;
+  caret-color:var(--st-text-color) !important;
+}
+.st-key-home_search_row [data-testid="stChatInput"] textarea::placeholder {
+  color:var(--st-text-color) !important;opacity:.62 !important;
+}
+.st-key-home_search_row [data-testid="stChatInput"] button,
+.st-key-home_search_row [data-testid="stChatInput"] [role="button"] {
+  background:transparent !important;color:var(--st-text-color) !important;
+  -webkit-text-fill-color:var(--st-text-color) !important;
+  opacity:1 !important;box-shadow:none !important;
+  border:0 !important;border-radius:999px !important;
+  width:36px !important;height:36px !important;
+  min-width:36px !important;min-height:36px !important;
+  padding:7px !important;
+}
+.st-key-home_search_row [data-testid="stChatInput"] button svg,
+.st-key-home_search_row [data-testid="stChatInput"] [role="button"] svg,
+.st-key-home_search_row [data-testid="stChatInput"] [data-testid="stIconMaterial"],
+.st-key-home_search_row [data-testid="stChatInput"] .material-symbols-rounded {
+  color:var(--st-text-color) !important;
+  -webkit-text-fill-color:var(--st-text-color) !important;
+  width:20px !important;height:20px !important;font-size:21px !important;
+  opacity:1 !important;visibility:visible !important;
+}
+.st-key-home_search_row [data-testid="stChatInput"] button:hover:not(:disabled) {
+  background:var(--st-secondary-background-color) !important;
+}
+.st-key-home_search_row [data-testid="stChatInput"] button:disabled {opacity:.64 !important;}
+.st-key-home_search_row [data-testid="stChatInput"] button:focus-visible {
+  outline:2px solid var(--st-text-color) !important;outline-offset:2px !important;
+}
+/* Full-app surfaces use the same grayscale palette. */
+.aivle-calendar td {background:var(--st-secondary-background-color) !important; border:1px solid var(--st-border-color) !important;}
+.aivle-calendar td.today {outline:2px solid var(--st-text-color) !important;}
+.aivle-calendar .event-dot {color:var(--st-text-color) !important; background:var(--st-background-color) !important; border:1px solid var(--st-border-color);}
+.aivle-calendar .task-dot {color:var(--st-text-color) !important;}
+.stApp [data-testid="stAlert"] {border:1px solid var(--st-border-color) !important; border-radius:12px !important;}
+.stApp [data-testid="stExpander"] {border-color:var(--st-border-color) !important;}
+.stApp [data-testid="stFileUploaderDropzone"] {border:1px dashed var(--st-text-color) !important; background:var(--st-secondary-background-color) !important;}
+/* Color emojis are avoided in navigation and headings below; user-generated text is untouched. */
 </style>""", unsafe_allow_html=True)
 
 def current_mascot(default_file):
@@ -294,7 +394,7 @@ def show_meeting_cheer():
         st.session_state.meeting_cheer = secrets.choice(CHEER_LINES)
     with st.container(key='aivle_fortune_line'):
         st.markdown(
-            '<p class="aivle-fortune-title">🍀 오늘의 운세</p>',
+            '<p class="aivle-fortune-title">오늘의 운세</p>',
             unsafe_allow_html=True,
         )
         # Native text widget respects dark/light theme without hard-coded colors.
@@ -341,8 +441,8 @@ with st.sidebar:
     page = st.session_state.active_page
     st.divider()
     st.caption(f'미완료 업무 {sum(t.get("status") != "완료" for t in st.session_state.tasks)}건 · 저장된 회의 {len(st.session_state.meeting_archive)}건')
-    with st.expander('⚙️ 설정', expanded=False):
-        st.caption('🎨 화면 테마: 오른쪽 위 ⋮ 메뉴 → Settings → Theme에서 Light / Dark를 선택하세요. 앱 전체 위젯에 동일하게 적용됩니다.')
+    with st.expander('설정', expanded=False):
+        st.caption('화면 테마는 오른쪽 위 메뉴 → Settings → Theme에서 Light / Dark를 선택하세요.')
         st.markdown('**내 마스코트**')
         st.caption('이미지를 선택하면 사이드바 로고와 홈에 작은 아바타로 표시돼요. 기본 홈은 텍스트 중심으로 유지됩니다.')
         mascot_upload = st.file_uploader('이미지 선택 (PNG / JPG)', type=['png', 'jpg', 'jpeg'],
@@ -500,7 +600,7 @@ if page == '홈':
             home_question = submitted_text
 
     if st.session_state.meeting_transcript:
-        with st.expander('🎙️ 회의 녹음 전사 결과 확인'):
+        with st.expander('회의 녹음 전사 결과'):
             st.caption('자동 음성 인식 결과에는 오류가 있을 수 있어 원본 녹음과 대조해 주세요.')
             st.text(st.session_state.meeting_transcript)
             st.download_button('전사 텍스트 다운로드', st.session_state.meeting_transcript,
@@ -508,7 +608,7 @@ if page == '홈':
 
     if st.session_state.analysis:
         info = st.session_state.analysis
-        st.subheader('📋 회의 분석 결과')
+        st.subheader('회의 분석 결과')
         st.markdown('**' + str(info.get('meeting_title', '통합 회의록')) + '**')
         st.write(info.get('summary', ''))
         a, b, c = st.columns(3)
@@ -532,7 +632,7 @@ if page == '홈':
         pass
 
 elif page == '회의록':
-    st.caption('🗂️ 회의별 핵심 요약과 담당 업무를 확인하고, 필요할 때 다시 열 수 있습니다.')
+    st.caption('회의별 핵심 요약과 담당 업무를 확인하고, 필요할 때 다시 열 수 있습니다.')
     archive = st.session_state.meeting_archive
     total_tasks = sum(len(r.get('tasks', [])) for r in archive)
     active_tasks = sum(t.get('status') != '완료' for r in archive for t in r.get('tasks', []))
@@ -548,7 +648,7 @@ elif page == '회의록':
                            file_name=f'aivle_xi_backup_{today.isoformat()}.json',
                            mime='application/json', use_container_width=True)
     with col_restore:
-        with st.popover('📥 백업 복원', use_container_width=True):
+        with st.popover('백업 복원', use_container_width=True):
             restore_file = st.file_uploader('AIVLE Ⅺ 백업 JSON', type=['json'], key='history_restore_file', max_upload_size=10)
             if st.button('백업 불러오기', disabled=restore_file is None):
                 try:
@@ -590,12 +690,12 @@ elif page == '회의록':
             decisions = info.get('decisions', []) or []
             conflicts = info.get('conflicts', []) or []
             with st.container(border=True):
-                st.markdown('### 📑 ' + str(record.get('title') or '제목 없는 회의'))
+                st.markdown('### ' + str(record.get('title') or '제목 없는 회의'))
                 st.caption(f"🗓️ 회의일: {record.get('meeting_date') or '미상'}　·　💾 저장: {str(record.get('saved_at',''))[:16].replace('T',' ')}")
                 st.write(info.get('summary') or '요약이 없습니다.')
                 st.caption(f'✅ 결정 {len(decisions)}건　 |　📋 업무 {len(tasks)}건　 |　⏳ 미완료 {len(pending)}건　 |　⚠️ 확인 필요 {len(conflicts)}건')
                 if decisions:
-                    st.markdown('**✅ 주요 결정사항**')
+                    st.markdown('**주요 결정사항**')
                     for decision in decisions[:3]:
                         st.markdown('• ' + str(decision))
                     if len(decisions) > 3:
@@ -603,11 +703,11 @@ elif page == '회의록':
                 if conflicts:
                     st.warning('⚠️ 자료 간 불일치 또는 확인 필요: ' + str(conflicts[0]))
                 if pending:
-                    with st.expander(f'📋 미완료 업무 미리보기 ({len(pending)}건)'):
+                    with st.expander(f'미완료 업무 미리보기 ({len(pending)}건)'):
                         for task in pending[:10]:
                             st.markdown(f"- **{task.get('title','제목 없음')}** · {task.get('owner','담당 미정')} · 마감 {task.get('due_date') or '미정'}")
                 actions = st.columns([1.15, 1.15, .8])
-                if actions[0].button('📂 회의 불러오기', key=f"load_{record['id']}", use_container_width=True):
+                if actions[0].button('회의 불러오기', key=f"load_{record['id']}", use_container_width=True):
                     st.session_state.analysis = copy.deepcopy(info)
                     st.session_state.tasks = copy.deepcopy(tasks)
                     st.session_state.meeting_transcript = record.get('transcript','')
@@ -620,18 +720,18 @@ elif page == '회의록':
                     st.session_state.active_page = '할 일'
                     st.rerun()
                 report = build_meeting_report(info, tasks)
-                actions[1].download_button('📥 회의록 저장', report,
+                actions[1].download_button('회의록 저장', report,
                                         file_name=f"meeting_{record['id']}.md", mime='text/markdown',
                                         key=f"dl_{record['id']}", use_container_width=True)
-                if actions[2].button('🗑️ 삭제', key=f"del_{record['id']}", use_container_width=True):
+                if actions[2].button('삭제', key=f"del_{record['id']}", use_container_width=True):
                     st.session_state.meeting_archive = [r for r in archive if r['id'] != record['id']]
                     if st.session_state.active_meeting_id == record['id']:
                         reset_meeting()
                     st.rerun()
-                with st.expander('📄 전체 회의록 보기'):
+                with st.expander('전체 회의록 보기'):
                     st.markdown(report)
                 if record.get('transcript'):
-                    with st.expander('🎙️ 회의 음성 전사 보기'):
+                    with st.expander('회의 음성 전사 보기'):
                         st.text(record['transcript'])
     else:
         st.info('📭 저장된 회의가 없습니다. 홈에서 첫 회의를 분석해 보세요.')
@@ -640,7 +740,7 @@ elif page == '캘린더':
     from datetime import date as calendar_date
     import calendar as calendar_lib
 
-    st.caption('➕ 아래에서 직접 일정을 등록하세요. 저장한 일정 제목이 날짜 칸에 표시됩니다. Google Calendar와는 연결되지 않습니다.')
+    st.caption('일정을 직접 등록하면 달력에 제목이 표시됩니다. Google Calendar와는 연결되지 않습니다.')
     deadlines = deadline_entries(
         st.session_state.meeting_archive,
         st.session_state.analysis,
@@ -657,14 +757,14 @@ elif page == '캘린더':
     chosen = st.date_input('일정 날짜 선택 및 상세 확인', value=today, key='cal_day_select')
     if st.session_state.pop('calendar_notice', None):
         st.success('일정이 등록됐습니다. 아래 달력에 제목이 표시됩니다.')
-    st.subheader('➕ 일정 직접 추가')
+    st.subheader('일정 직접 추가')
     with st.form('calendar_add_form', clear_on_submit=True):
         add_title = st.text_input('일정 제목', max_chars=120, placeholder='예: 프로젝트 팀 회의')
         add_day = st.date_input('날짜', value=chosen)
         add_timed = st.checkbox('시작 시간 지정', value=False)
         add_time = st.time_input('시작 시간 (시간 미지정 시 무시)', value=datetime.now(ZoneInfo('Asia/Seoul')).time())
         add_note = st.text_area('메모 (선택)', max_chars=2000)
-        add_submit = st.form_submit_button('➕ 일정 저장', type='primary', use_container_width=True)
+        add_submit = st.form_submit_button('일정 저장', type='primary', use_container_width=True)
     if add_submit:
         try:
             st.session_state.calendar_events = save_event(
@@ -694,7 +794,7 @@ elif page == '캘린더':
     st.markdown(month_html(year, month, events, deadlines, today), unsafe_allow_html=True)
     st.caption('🗓 직접 등록 일정 제목은 날짜 칸에 표시되며, 📌 표시는 업무 마감일입니다. 날짜를 선택하면 아래에서 상세 내용을 확인할 수 있습니다.')
     day_entries = entries_for_day(events, deadlines, chosen)
-    st.subheader(f'📆 {chosen.isoformat()} 일정 ({len(day_entries)}건)')
+    st.subheader(f'{chosen.isoformat()} 일정 ({len(day_entries)}건)')
     if not day_entries:
         st.info('선택한 날짜에 일정이 없습니다.')
     for entry in day_entries:
@@ -708,7 +808,7 @@ elif page == '캘린더':
                 if entry.get('note'):
                     st.caption(entry['note'])
     if events:
-        with st.expander('✏️ 일정 수정·삭제'):
+        with st.expander('일정 수정·삭제'):
             chosen_id = st.selectbox('편집할 일정', options=[e['id'] for e in events],
                 format_func=lambda key: next(f"{e['date']} · {e['title']}" for e in events if e['id']==key))
             selected_event = next(e for e in events if e['id'] == chosen_id)
@@ -784,7 +884,7 @@ elif page == '브리핑':
         with col1:
             st.download_button('브리핑 다운로드', briefing, 'today_briefing.md', mime='text/markdown', use_container_width=True)
         with col2:
-            listen = st.button('🔊 브리핑 음성 재생', use_container_width=True)
+            listen = st.button('브리핑 음성 재생', use_container_width=True)
         if listen:
             try:
                 with st.spinner('브리핑 음성 생성 중...'):
@@ -859,9 +959,9 @@ if page == '홈':
             st.rerun()
     if st.session_state.last_chat_reply:
         with st.container(border=True):
-            st.markdown('**🔊 AIVLE Ⅺ의 답변 음성으로 듣기**')
+            st.markdown('**AIVLE Ⅺ 답변 음성 듣기**')
             st.caption('재생 버튼을 누르면 MP3를 만들고 플레이어에 표시합니다. 브라우저가 자동 재생을 차단하면 ▶ 버튼을 눌러 주세요.')
-            play_reply = st.button('🔊 마지막 답변 음성 생성 / 재생', use_container_width=True)
+            play_reply = st.button('마지막 답변 음성 생성 / 재생', use_container_width=True)
             if play_reply:
                 try:
                     with st.spinner('음성 답변을 생성하고 있습니다...'):
@@ -885,7 +985,7 @@ if page == '홈':
 # 이메일 기능은 삭제하지 않고 접힌 사이드바 메뉴로 이동합니다.
 with st.sidebar:
     # 이메일은 AI와 독립적으로 처리하며 반드시 사용자 최종 확인이 있어야 발송합니다.
-    with st.expander('✉️ 이메일 공유', expanded=bool(st.session_state.pending_email)):
+    with st.expander('이메일 공유', expanded=bool(st.session_state.pending_email)):
         if not st.session_state.analysis:
             st.info('회의 분석이 완료되면 이메일 공유가 활성화됩니다.')
         else:
