@@ -70,18 +70,13 @@ st.markdown("""<style>
 .st-key-home_hero {padding: 1.2rem 0 .6rem;}
 .st-key-home_hero [data-testid="stImage"] {display:flex; justify-content:center;}
 .st-key-home_hero h1, .st-key-home_hero .home_tagline {text-align:center;}
-/* The paperclip is a square icon directly to the left of the question box. */
+/* One Google-style composer. Built-in plus, microphone, send share one input. */
 .st-key-home_search_row {margin: 0 auto 1.2rem; max-width: 740px;}
-.st-key-home_search_row [data-testid="stPopover"] button {
-   width: 46px !important; height: 46px !important; min-width: 46px !important;
-   padding: 0 !important; border: 1.5px solid var(--text-color) !important;
-   border-radius: 12px !important; display:flex !important;
-   align-items:center !important; justify-content:center !important;
-   color: var(--text-color) !important; background: var(--secondary-background-color) !important;
+.st-key-home_search_row [data-testid="stChatInput"] {
+   border: 1.5px solid var(--border-color) !important; border-radius: 28px !important;
+   box-shadow: 0 2px 12px color-mix(in srgb, var(--text-color) 7%, transparent);
 }
-.st-key-home_search_row [data-testid="stPopover"] button:hover {border-color:var(--primary-color) !important;}
-.st-key-home_search_row [data-testid="stChatInput"] {border: 1.5px solid var(--text-color) !important; border-radius: 16px !important;}
-.st-key-home_search_row [data-testid="stChatInput"] button {color:var(--text-color) !important;}
+.st-key-home_search_row [data-testid="stChatInput"] button {color: var(--text-color) !important;}
 /* Distinct outlines in Light mode as well as Dark mode. */
 .st-key-aivle_nav [data-testid="stButton"] button {border:1px solid var(--border-color) !important;}
 .st-key-aivle_nav [data-testid="stButton"] button svg {stroke-width:2.2px;}
@@ -348,92 +343,93 @@ else:
     st.title(page)
 
 if page == '홈':
+    # One composer for typed chat, audio questions and multimodal meeting uploads.
+    # Streamlit 1.55+ provides native + (files), microphone and send controls.
     with st.container(key='home_search_row'):
-        attach_col, question_col = st.columns([1, 12], vertical_alignment='bottom', gap='small')
-        with attach_col:
-            with st.popover('📎', help='회의 자료 첨부 · 분석'):
-                st.caption('TXT · 녹음 · 사진을 함께 넣거나 하나만 선택할 수 있어요.')
-                c1, c2 = st.columns(2)
-                with c1:
-                    text_file = st.file_uploader('📄 텍스트', type=['txt'], key='meeting_txt', max_upload_size=1, help='UTF-8 텍스트 파일 · 최대 1MB')
-                with c2:
-                    image_file = st.file_uploader('🖼️ 이미지', type=['png','jpg','jpeg'], key='meeting_img', max_upload_size=8)
-                recording_file = st.file_uploader(
-                    '🎧 녹음 파일 첨부',
-                    type=['mp3', 'm4a', 'mp4', 'mpeg', 'mpga', 'wav', 'webm'],
-                    key='meeting_audio', max_upload_size=24,
-                    help='업로드한 녹음을 STT로 전사한 뒤 회의록·화이트보드와 함께 분석합니다.'
-                )
-                st.markdown('**🎙️ 회의 직접 녹음**')
-                live_recording = st.audio_input('마이크로 회의 녹음 (녹음 종료 후 분석 가능)', key='live_meeting_audio')
-                st.caption('브라우저의 마이크 권한이 필요합니다. 녹음이 끝나면 통합 분석 실행을 눌러 주세요. 긴 회의는 파일 녹음 후 업로드를 권장합니다.')
-                if live_recording is not None:
-                    st.success(f'마이크 녹음 준비됨 · {len(live_recording.getvalue())/1024/1024:.1f}MB')
-                if recording_file is not None:
-                    st.caption(f'✓ 녹음 파일 첨부: {recording_file.name} · {recording_file.size / 1024 / 1024:.1f}MB')
-                audio_source = None
-                if live_recording is not None and recording_file is not None:
-                    choice = st.radio('분석할 음성 선택', ['직접 녹음', '업로드 파일'], horizontal=True)
-                    audio_source = live_recording if choice == '직접 녹음' else recording_file
-                else:
-                    audio_source = live_recording if live_recording is not None else recording_file
-                # 화이트보드 미리보기는 제거했습니다. 파일명/형식 검증만 표시합니다.
-                whiteboard_bytes, image_mime, image_error = None, None, None
-                if image_file is not None:
-                    try:
-                        raw_bytes = image_file.getvalue()
-                        if not raw_bytes or len(raw_bytes) > 8_000_000:
-                            raise ValueError('이미지는 8MB 이하의 PNG/JPG 파일이어야 합니다.')
-                        with Image.open(io.BytesIO(raw_bytes)) as img:
-                            image_format = img.format
-                            if image_format not in ('PNG', 'JPEG'):
-                                raise ValueError('PNG 또는 JPG 이미지 파일만 지원합니다.')
+        home_submission = st.chat_input(
+            '궁금한 것을 입력하세요', key='home_unified_composer',
+            accept_file='multiple',
+            file_type=['txt', 'png', 'jpg', 'jpeg', 'mp3', 'm4a', 'mp4',
+                       'mpeg', 'mpga', 'wav', 'webm'],
+            accept_audio=True, max_upload_size=24,
+        )
+    st.caption('＋ 회의 자료 첨부 · 🎙️ 음성 질문 · 텍스트 입력을 한곳에서 이용하세요.')
+    home_question = None
+    if home_submission is not None:
+        submitted_text = (home_submission.text or '').strip()
+        attached_files = list(home_submission.files or [])
+        recorded_voice = home_submission.audio
+        if attached_files:
+            # Any attached file means meeting analysis. The optional text is the analysis request.
+            text_files = [f for f in attached_files if f.name.lower().endswith('.txt')]
+            image_files = [f for f in attached_files if f.name.lower().endswith(('.png', '.jpg', '.jpeg'))]
+            sound_files = [f for f in attached_files if f.name.lower().endswith(('.mp3', '.m4a', '.mp4', '.mpeg', '.mpga', '.wav', '.webm'))]
+            issue = None
+            if len(image_files) > 1 or len(sound_files) > 1 or (sound_files and recorded_voice):
+                issue = '이미지와 녹음 파일은 각각 1개씩 첨부해 주세요. 마이크 녹음과 음성 파일 중 하나를 선택해 주세요.'
+            elif any(len(f.getvalue()) > 1_000_000 for f in text_files):
+                issue = 'TXT는 파일당 1MB 이하여야 합니다.'
+            elif any(len(f.getvalue()) > 8_000_000 for f in image_files):
+                issue = '이미지는 8MB 이하여야 합니다.'
+            elif any(len(f.getvalue()) > MAX_AUDIO_BYTES for f in sound_files):
+                issue = '음성 파일은 24MB 이하여야 합니다.'
+            if issue:
+                st.warning(issue)
+            else:
+                try:
+                    meeting_text = '\n\n'.join(f'[{f.name}]\n' + f.getvalue().decode('utf-8-sig') for f in text_files)
+                    image_data, image_mime = None, None
+                    if image_files:
+                        image_data = image_files[0].getvalue()
+                        with Image.open(io.BytesIO(image_data)) as img:
+                            fmt = img.format
+                            if fmt not in ('PNG', 'JPEG'):
+                                raise ValueError('PNG 또는 JPEG 형식의 이미지만 사용할 수 있어요.')
                             img.verify()
-                        image_mime = 'image/png' if image_format == 'PNG' else 'image/jpeg'
-                        whiteboard_bytes = raw_bytes
-                        st.caption(f'✓ 화이트보드 업로드 완료: {image_file.name} · {len(raw_bytes) / 1024 / 1024:.1f}MB')
-                    except (UnidentifiedImageError, OSError, ValueError) as exc:
-                        image_error = str(exc)
-                        st.error('이미지 검증 실패: ' + image_error)
-
-                analyze_clicked = st.button('✨ 회의 분석하기', type='primary', use_container_width=True)
-        with question_col:
-            home_question = st.chat_input('궁금한 것을 입력하세요', key='home_chat_search')
-    if analyze_clicked:
-        if text_file is None and image_file is None and audio_source is None:
-            st.warning('회의록 TXT, 화이트보드 이미지, 회의 녹음 중 하나 이상 업로드해 주세요.')
-        elif image_error:
-            st.error('화이트보드 파일을 확인해 주세요.')
-        elif text_file is not None and text_file.size > 1_000_000:
-            st.warning('회의록 TXT는 1MB 이하로 올려 주세요.')
-        elif audio_source is not None and len(audio_source.getvalue()) > MAX_AUDIO_BYTES:
-            st.warning('회의 녹음 파일은 24MB 이하로 올려 주세요.')
-        else:
+                        image_mime = 'image/png' if fmt == 'PNG' else 'image/jpeg'
+                    audio_file = sound_files[0] if sound_files else recorded_voice
+                    transcript_text = ''
+                    if audio_file is not None:
+                        if len(audio_file.getvalue()) > MAX_AUDIO_BYTES:
+                            raise ValueError('음성 녹음은 24MB 이하여야 합니다.')
+                        with st.spinner('회의 음성을 전사하고 있어요...'):
+                            transcript_text = transcribe_audio(
+                                client, stt_model(), audio_file.getvalue(),
+                                audio_file.name if sound_files else 'meeting_recording.wav')
+                    combined = meeting_text.strip()
+                    if transcript_text:
+                        combined += ('\n\n' if combined else '') + '[회의 녹음 전사]\n' + transcript_text
+                    if submitted_text:
+                        combined += ('\n\n' if combined else '') + '[사용자 요청]\n' + submitted_text
+                    with st.spinner('회의 자료를 분석하고 할 일을 정리하고 있어요...'):
+                        analysis = analyze_meeting(client, llm_model(), combined, image_data, image_mime)
+                    reset_meeting()
+                    st.session_state.analysis = analysis
+                    st.session_state.tasks = with_ids(analysis.get('tasks', []))
+                    st.session_state.meeting_transcript = transcript_text
+                    record = make_record(analysis, st.session_state.tasks, transcript_text)
+                    st.session_state.meeting_archive = upsert_record(st.session_state.meeting_archive, record)
+                    st.session_state.active_meeting_id = record['id']
+                    st.session_state.meeting_cheer = secrets.choice(CHEER_LINES)
+                    st.success(f'회의 분석 완료 · 할 일 {len(st.session_state.tasks)}개 · 회의록에 저장했어요.')
+                except (UnicodeError, ValueError, UnidentifiedImageError, OSError) as exc:
+                    st.error('첨부 자료 확인: ' + str(exc)[:180])
+                except Exception as exc:
+                    st.error(format_problem(exc))
+        elif recorded_voice is not None:
             try:
-                meeting_text = text_file.getvalue().decode('utf-8-sig') if text_file is not None else ''
-                transcript_text = ''
-                if audio_source is not None:
-                    with st.spinner('회의 음성을 텍스트로 변환하고 있습니다...'):
-                        transcript_text = transcribe_audio(
-                            client, stt_model(), audio_source.getvalue(),
-                            'meeting_recording.wav' if audio_source is live_recording else audio_source.name
-                        )
-                combined_text = meeting_text.strip()
-                if transcript_text:
-                    combined_text += ('\n\n' if combined_text else '') + '[회의 녹음 전사]\n' + transcript_text
-                with st.spinner('회의 자료를 통합 분석하고 담당 업무를 추출하는 중...'):
-                    analysis = analyze_meeting(client, llm_model(), combined_text, whiteboard_bytes, image_mime)
-                reset_meeting()
-                st.session_state.analysis = analysis
-                st.session_state.tasks = with_ids(analysis.get('tasks', []))
-                st.session_state.meeting_transcript = transcript_text
-                record = make_record(analysis, st.session_state.tasks, transcript_text)
-                st.session_state.meeting_archive = upsert_record(st.session_state.meeting_archive, record)
-                st.session_state.active_meeting_id = record['id']
-                st.session_state.meeting_cheer = secrets.choice(CHEER_LINES)
-                st.success(f'분석 완료 · 추출 업무 {len(st.session_state.tasks)}건 · [회의록]에 보관됨')
+                if len(recorded_voice.getvalue()) > MAX_AUDIO_BYTES:
+                    raise ValueError('음성 질문은 24MB 이하여야 합니다.')
+                with st.spinner('음성 질문을 텍스트로 변환하고 있어요...'):
+                    home_question = transcribe_audio(client, stt_model(), recorded_voice.getvalue(), 'voice.wav')
+                st.session_state.last_transcript = home_question
+                if submitted_text:
+                    home_question = submitted_text + '\n' + home_question
+                st.info('인식한 질문: ' + (home_question or '음성을 인식하지 못했어요.'))
             except Exception as exc:
                 st.error(format_problem(exc))
+        else:
+            home_question = submitted_text
 
     if st.session_state.meeting_transcript:
         with st.expander('🎙️ 회의 녹음 전사 결과 확인'):
@@ -465,7 +461,7 @@ if page == '홈':
         with st.expander('최종 회의록 텍스트 보기'):
             st.markdown(report)
     else:
-        st.caption('회의록·화이트보드·회의 녹음 중 하나 이상 올리고 분석을 실행하세요.')
+        st.caption('회의록을 분석하려면 검색창의 ＋ 버튼으로 자료를 첨부해 보내주세요.')
 
 elif page == '회의록':
     st.caption('🗂️ 회의별 핵심 요약과 담당 업무를 확인하고, 필요할 때 다시 열 수 있습니다.')
@@ -739,19 +735,7 @@ if page == '홈':
     for message in st.session_state.messages[-20:]:
         with st.chat_message(message['role']):
             st.markdown(message['content'])
-    with st.expander('🎙️ 음성으로 질문하기'):
-        audio_input = st.audio_input('질문 녹음', key='chat_audio_input')
-        voice_submit = st.button('음성 질문 보내기', disabled=audio_input is None)
     user_question = home_question
-    if voice_submit and audio_input is not None:
-        try:
-            with st.spinner('음성 인식 중...'):
-                user_question = transcribe_audio(client, stt_model(), audio_input.getvalue(), 'voice.wav')
-            st.session_state.last_transcript = user_question
-            st.info('인식된 질문: ' + (user_question or '음성을 인식하지 못했습니다.'))
-        except Exception as exc:
-            st.error(format_problem(exc))
-            user_question = None
     if user_question and user_question.strip():
         question = user_question.strip()
         if len(question) > 2500:
