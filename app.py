@@ -244,16 +244,8 @@ def show_meeting_cheer():
 
 
 with st.sidebar:
-    # 과도하게 큰 이미지를 피하고 로고/브랜드 영역만 간결하게 배치합니다.
-    logo, name_col = st.columns([1, 3], vertical_alignment='center')
-    with logo:
-        if current_mascot(SIDE_IMAGE):
-            st.image(current_mascot(SIDE_IMAGE), use_container_width=True)
-        else:
-            st.markdown('🤖')
-    with name_col:
-        st.markdown('**AIVLE Ⅺ**')
-        st.caption('AI 개인비서 AIVLE')
+    # 상단의 중복 이미지와 설명 문구는 제거하고 브랜드명만 간결하게 표시합니다.
+    st.markdown('**AIVLE Ⅺ**')
     st.divider()
     # 단색 Material 아이콘은 테마와 함께 색이 바뀌어 이모지 색상 불일치를 방지합니다.
     menu_icons = [
