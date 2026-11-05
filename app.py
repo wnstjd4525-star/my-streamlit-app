@@ -67,9 +67,14 @@ st.markdown("""<style>
 }
 /* Lightweight Google-style search hero and mascot speech bubble. */
 /* Center the brand and mascot in a restrained homepage hero. */
-.st-key-home_hero {padding: 1.2rem 0 .6rem;}
-.st-key-home_hero [data-testid="stImage"] {display:flex; justify-content:center;}
-.st-key-home_hero h1, .st-key-home_hero .home_tagline {text-align:center;}
+.st-key-home_hero {max-width: 740px; margin: 7vh auto 1.4rem; padding: .3rem .2rem; text-align: center;}
+.st-key-home_hero .aivle-home-wordmark {text-align:center !important; font-size: clamp(2.7rem, 6vw, 4.2rem) !important; font-weight: 720; letter-spacing: -.065em; margin: .2rem 0 1rem; line-height: 1.12;}
+.st-key-home_hero .aivle-home-wordmark span {color: var(--primary-color);}
+.st-key-home_hero .home_tagline {text-align:center; color: var(--text-color); opacity: .76; margin: 0 0 1.3rem;}
+.st-key-aivle_fortune_line {text-align:center; max-width: 540px; margin: 0 auto .8rem; padding: .65rem 1rem; border-radius: 18px; border: 1px solid var(--border-color); background: var(--secondary-background-color);}
+.st-key-aivle_fortune_line .aivle-fortune-title {font-size: .78rem; font-weight: 650; margin: 0 0 .25rem; color: var(--primary-color);}
+.st-key-aivle_fortune_line p {font-size: .88rem; text-align:center; margin: 0;}
+@media (max-width: 640px) {.st-key-home_hero {margin-top: 2rem;} .st-key-home_hero .aivle-home-wordmark {font-size:2.65rem !important;}}
 /* One Google-style composer. Built-in plus, microphone, send share one input. */
 .st-key-home_search_row {margin: 0 auto 1.2rem; max-width: 740px;}
 .st-key-home_search_row [data-testid="stChatInput"] {
@@ -226,19 +231,16 @@ CHEER_LINES = [
 
 
 def show_meeting_cheer():
-    """Render the same session's light-hearted fortune next to the home mascot."""
+    """Small centered, light-hearted fortune under the text logo (no image)."""
     if st.session_state.meeting_cheer is None:
         st.session_state.meeting_cheer = secrets.choice(CHEER_LINES)
-    mascot_col, bubble_col = st.columns([1, 3], vertical_alignment='center', gap='small')
-    with mascot_col:
-        if current_mascot(MAIN_IMAGE):
-            st.image(current_mascot(MAIN_IMAGE), width=102)
-        else:
-            st.markdown('🤖')
-    with bubble_col:
-        with st.container(border=True, key='aivle_cheer_bubble'):
-            st.caption('🍀 오늘의 운세')
-            st.markdown(st.session_state.meeting_cheer)
+    with st.container(key='aivle_fortune_line'):
+        st.markdown(
+            '<p class="aivle-fortune-title">🍀 오늘의 운세</p>',
+            unsafe_allow_html=True,
+        )
+        # Native text widget respects dark/light theme without hard-coded colors.
+        st.markdown(st.session_state.meeting_cheer)
 
 
 with st.sidebar:
@@ -333,11 +335,9 @@ page_kicker = {
 }
 if page == '홈':
     with st.container(key='home_hero'):
-        left_space, hero_center, right_space = st.columns([1, 3, 1])
-        with hero_center:
-            st.markdown('<h1 style="text-align:center;margin-bottom:.75rem">AIVLE Ⅺ</h1>', unsafe_allow_html=True)
-            show_meeting_cheer()
-            st.markdown('<p class="home_tagline" style="text-align:center;opacity:.7;margin:.6rem 0 0">회의부터 일정까지, 무엇이든 도와드릴게요.</p>', unsafe_allow_html=True)
+        st.markdown('<h1 class="aivle-home-wordmark">AIVLE <span>Ⅺ</span></h1>', unsafe_allow_html=True)
+        st.markdown('<p class="home_tagline">회의부터 일정까지, 무엇이든 도와드릴게요.</p>', unsafe_allow_html=True)
+        show_meeting_cheer()
 else:
     st.caption(page_kicker.get(page, 'AIVLE Ⅺ'))
     st.title(page)
