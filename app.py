@@ -43,47 +43,83 @@ else:
     icon_fg, field_bg, hover_bg = '#DDE6EF', '#171A1F', '#1C3133'
 
 st.markdown(f"""<style>
-/* 에이블11 테마: SVG/Material 아이콘을 OS 다크모드와 독립적으로 동기화 */
-:root {{color-scheme: {'light' if st.session_state.ui_theme == '라이트' else 'dark'};}}
-[data-testid="stAppViewContainer"] {{background:{bg};color:{fg};}}
-[data-testid="stSidebar"] {{background:{side};border-right:1px solid {border};color:{fg};}}
-[data-testid="stHeader"] {{background:{bg};}}
+/* In-app theme variables override the fixed deployment theme for all nested widgets. */
+.stApp, [data-testid="stAppViewContainer"], [data-testid="stMain"],
+[data-testid="stSidebar"], [data-testid="stSidebarContent"] {{
+  --background-color: {bg};
+  --secondary-background-color: {field_bg};
+  --text-color: {fg};
+  --primary-color: #109E97;
+  --st-background-color: {bg};
+  --st-secondary-background-color: {field_bg};
+  --st-text-color: {fg};
+  --st-primary-color: #109E97;
+  --st-border-color: {border};
+  color-scheme: {'light' if st.session_state.ui_theme == '라이트' else 'dark'};
+  color: {fg};
+}}
+[data-testid="stAppViewContainer"], [data-testid="stMain"] {{background:{bg} !important;}}
+[data-testid="stSidebar"], [data-testid="stSidebarContent"] {{background:{side} !important;color:{fg} !important;}}
+[data-testid="stHeader"] {{background:{bg} !important;}}
 .block-container {{max-width:1040px;padding-top:1.35rem;padding-bottom:3rem;}}
-h1,h2,h3 {{letter-spacing:-.04em;color:{fg} !important;}}
-h1 {{font-size:1.72rem !important;}}
-h2,h3 {{font-size:1.26rem !important;}}
+.stApp h1,.stApp h2,.stApp h3 {{letter-spacing:-.04em;color:{fg} !important;}}
+.stApp h1 {{font-size:1.72rem !important;}}
+.stApp h2,.stApp h3 {{font-size:1.26rem !important;}}
 [data-testid="stVerticalBlockBorderWrapper"] > div {{border-radius:14px;}}
-[data-testid="stMetric"] {{background:{panel};border:1px solid {border};border-radius:12px;padding:.8rem 1rem;}}
-[data-testid="stMetric"] [data-testid="stMetricLabel"],
-[data-testid="stMetric"] [data-testid="stMetricValue"] {{color:{fg};}}
-[data-testid="stFileUploader"] {{border-radius:12px;}}
-/* 테마에 의존하지 않는 기본 아이콘 잔색 제거 */
-[data-testid="stSidebar"] button svg,
-[data-testid="stSidebar"] button .material-symbols-rounded,
-[data-testid="stSidebar"] button .material-symbols-outlined,
-[data-testid="stSidebar"] [data-testid="stIcon"] {{color:{icon_fg} !important;stroke:currentColor;}}
-[data-testid="stSidebar"] button[data-testid="stBaseButton-primary"] svg,
-[data-testid="stSidebar"] button[data-testid="stBaseButton-primary"] .material-symbols-rounded {{color:{accent_fg} !important;}}
-[data-testid="stSidebar"] button {{width:100%;justify-content:flex-start;text-align:left;color:{fg};background:transparent;border-color:transparent;}}
-[data-testid="stSidebar"] button:hover {{background:{hover_bg};border-color:{border};}}
-[data-testid="stSidebar"] button[data-testid="stBaseButton-primary"] {{background:#109E97;color:{accent_fg};border:0;}}
-[data-testid="stSidebar"] button[data-testid="stBaseButton-primary"]:hover {{background:#0C8D86;}}
-.stApp [data-testid="stCheckbox"] svg,
-.stApp [data-testid="stToggle"] svg {{color:{icon_fg};}}
-.stApp [data-testid="stTextInput"] input,
-.stApp [data-testid="stTextArea"] textarea {{background:{field_bg};color:{fg};}}
-div.stButton > button {{border-radius:10px;}}
-div.stButton > button[kind="primary"] {{background:#109E97;color:{accent_fg};border:0;}}
-/* 달력: 내부의 어두운 고정 스타일보다 항상 마지막에 적용 */
+[data-testid="stMetric"] {{background:{panel} !important;border:1px solid {border};border-radius:12px;padding:.8rem 1rem;}}
+[data-testid="stMetric"] * {{color:{fg};}}
+.stApp [data-testid="stFileUploader"] {{border-radius:12px;}}
+/* Controls must respond to light/dark, not the server's original dark palette. */
+.stApp input,.stApp textarea,.stApp select,
+.stApp [data-baseweb="input"] > div,
+.stApp [data-baseweb="select"] > div,
+.stApp [data-baseweb="textarea"] > div {{background-color:{field_bg} !important;color:{fg} !important;border-color:{border} !important;}}
+.stApp input::placeholder,.stApp textarea::placeholder {{color:{muted} !important;opacity:1;}}
+.stApp [data-testid="stCheckbox"] label,.stApp [data-testid="stRadio"] label,
+.stApp [data-testid="stToggle"] label,.stApp [data-testid="stWidgetLabel"] p {{color:{fg} !important;}}
+.stApp [data-testid="stCheckbox"] svg,.stApp [data-testid="stToggle"] svg {{color:{icon_fg};}}
+/* Target the actual Streamlit nav button and inner markdown container. */
+[data-testid="stSidebar"] [data-testid="stButton"] > button,
+[data-testid="stSidebar"] .stButton > button {{
+  display:flex !important;
+  flex-direction:row !important;
+  justify-content:flex-start !important;
+  align-items:center !important;
+  text-align:left !important;
+  gap:.7rem !important;
+  width:100% !important;
+  padding:.62rem .85rem !important;
+  border-radius:10px !important;
+  white-space:nowrap;
+}}
+[data-testid="stSidebar"] [data-testid="stButton"] > button > div,
+[data-testid="stSidebar"] [data-testid="stButton"] > button [data-testid="stMarkdownContainer"] {{
+  flex:0 1 auto !important;
+  text-align:left !important;
+  margin:0 !important;
+}}
+[data-testid="stSidebar"] [data-testid="stButton"] > button p {{text-align:left !important;margin:0 !important;}}
+[data-testid="stSidebar"] [data-testid="stButton"] > button:not([kind="primary"]) {{color:{fg} !important;background:transparent !important;border:1px solid transparent !important;}}
+[data-testid="stSidebar"] [data-testid="stButton"] > button:not([kind="primary"]):hover {{background:{hover_bg} !important;border-color:{border} !important;}}
+[data-testid="stSidebar"] [data-testid="stButton"] > button[kind="primary"] {{background:#109E97 !important;color:#FFFFFF !important;border:1px solid #109E97 !important;}}
+[data-testid="stSidebar"] [data-testid="stButton"] > button svg,
+[data-testid="stSidebar"] [data-testid="stButton"] > button [data-testid="stIcon"],
+[data-testid="stSidebar"] [data-testid="stButton"] > button .material-symbols-rounded {{
+  color:currentColor !important;
+  stroke:currentColor !important;
+  flex-shrink:0 !important;
+}}
+[data-testid="stSidebar"] [data-testid="stButton"] > button[kind="primary"] p {{color:#FFFFFF !important;}}
+[data-testid="stSidebar"] [data-testid="stButton"] > button:not([kind="primary"]) p {{color:{fg} !important;}}
+/* Responsive calendar colors; overrides hardcoded cell colors. */
 .stApp .aivle-calendar table {{width:100%;border-collapse:separate;border-spacing:4px;table-layout:fixed;}}
 .stApp .aivle-calendar th {{font-size:.8rem;color:{muted};text-align:center;padding:6px;}}
-.stApp .aivle-calendar td {{height:90px;vertical-align:top;padding:9px;border:1px solid {border};border-radius:9px;background:{panel};color:{fg};}}
+.stApp .aivle-calendar td {{height:90px;vertical-align:top;padding:9px;border:1px solid {border} !important;border-radius:9px;background:{panel} !important;color:{fg} !important;}}
 .stApp .aivle-calendar td.other {{opacity:.45;}}
-.stApp .aivle-calendar td.today {{border:2px solid #109E97;background:{hover_bg};}}
-.stApp .aivle-calendar .day-number {{font-weight:650;margin-bottom:8px;color:{fg};}}
-.stApp .aivle-calendar .event-dot,.stApp .aivle-calendar .task-dot {{display:block;font-size:.69rem;margin-top:3px;overflow:hidden;white-space:nowrap;}}
-.stApp .aivle-calendar .event-dot {{color:{'#176B94' if st.session_state.ui_theme == '라이트' else '#60C5EE'};}}
-.stApp .aivle-calendar .task-dot {{color:{'#805500' if st.session_state.ui_theme == '라이트' else '#E8C37B'};}}
+.stApp .aivle-calendar td.today {{border:2px solid #109E97 !important;background:{hover_bg} !important;}}
+.stApp .aivle-calendar .day-number {{font-weight:650;margin-bottom:8px;color:{fg} !important;}}
+.stApp .aivle-calendar .event-dot {{color:{'#176B94' if st.session_state.ui_theme == '라이트' else '#60C5EE'} !important;}}
+.stApp .aivle-calendar .task-dot {{color:{'#805500' if st.session_state.ui_theme == '라이트' else '#E8C37B'} !important;}}
 </style>""", unsafe_allow_html=True)
 
 
@@ -173,7 +209,7 @@ def toggle_subtask(task_id, index):
     checks = list(task.get('todo_done', []))
     lines = description_to_checklist(task.get('description'))
     checks = (checks + [False] * len(lines))[:len(lines)]
-    checks[index] = bool(st.session_state[f'todo_{st.session_state.active_meeting_id or 'current'}_{task_id}_{index}'])
+    checks[index] = bool(st.session_state[f"todo_{st.session_state.active_meeting_id or 'current'}_{task_id}_{index}"])
     task['todo_done'] = checks
     # Existing status control remains available; auto-promote to completed when all checked.
     if all(checks):
@@ -216,10 +252,10 @@ with st.sidebar:
     ]
     if 'active_page' not in st.session_state:
         st.session_state.active_page = '회의 통합 분석'
-    for name, icon in menu_icons:
+    for menu_index, (name, icon) in enumerate(menu_icons):
         if st.button(name, icon=icon,
                      type='primary' if st.session_state.active_page == name else 'secondary',
-                     key='nav_' + name, use_container_width=True):
+                     key=f'nav_{menu_index}', use_container_width=True):
             st.session_state.active_page = name
             st.rerun()
     page = st.session_state.active_page
