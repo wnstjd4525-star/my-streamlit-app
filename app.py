@@ -229,7 +229,7 @@ with st.sidebar:
     with st.expander('⚙️ 설정', expanded=False):
         st.caption('🎨 화면 테마: 오른쪽 위 ⋮ 메뉴 → Settings → Theme에서 Light / Dark를 선택하세요. 앱 전체 위젯에 동일하게 적용됩니다.')
         mascot_upload = st.file_uploader('내 AIVLE Ⅺ 이미지 변경', type=['png','jpg','jpeg'],
-                                         key='user_mascot_upload', help='최대 3MB · 현재 세션에서만 적용')
+                                         key='user_mascot_upload', max_upload_size=3, help='최대 3MB · 현재 세션에서만 적용')
         if mascot_upload is not None:
             try:
                 mascot_data = mascot_upload.getvalue()
@@ -286,13 +286,13 @@ if page == '회의 통합 분석':
         st.markdown('**회의 자료 업로드**')
         c1, c2 = st.columns(2)
         with c1:
-            text_file = st.file_uploader('회의록 TXT', type=['txt'], key='meeting_txt', help='UTF-8 텍스트 파일')
+            text_file = st.file_uploader('회의록 TXT', type=['txt'], key='meeting_txt', max_upload_size=1, help='UTF-8 텍스트 파일 · 최대 1MB')
         with c2:
-            image_file = st.file_uploader('화이트보드 이미지 (최대 8MB)', type=['png','jpg','jpeg'], key='meeting_img')
+            image_file = st.file_uploader('화이트보드 이미지 (최대 8MB)', type=['png','jpg','jpeg'], key='meeting_img', max_upload_size=8)
         recording_file = st.file_uploader(
             '회의 녹음 파일 (선택 · MP3/M4A/WAV 등, 최대 24MB)',
             type=['mp3', 'm4a', 'mp4', 'mpeg', 'mpga', 'wav', 'webm'],
-            key='meeting_audio',
+            key='meeting_audio', max_upload_size=24,
             help='업로드한 녹음을 STT로 전사한 뒤 회의록·화이트보드와 함께 분석합니다.'
         )
         st.markdown('**🎙️ 회의 중 바로 녹음하기**')
@@ -412,7 +412,7 @@ elif page == '회의 기록':
                            mime='application/json', use_container_width=True)
     with col_restore:
         with st.popover('📥 백업 복원', use_container_width=True):
-            restore_file = st.file_uploader('AIVLE Ⅺ 백업 JSON', type=['json'], key='history_restore_file')
+            restore_file = st.file_uploader('AIVLE Ⅺ 백업 JSON', type=['json'], key='history_restore_file', max_upload_size=10)
             if st.button('백업 불러오기', disabled=restore_file is None):
                 try:
                     records, messages, events = import_backup(restore_file.getvalue(), include_events=True)
