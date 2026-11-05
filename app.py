@@ -120,6 +120,63 @@ st.markdown(f"""<style>
 .stApp .aivle-calendar .day-number {{font-weight:650;margin-bottom:8px;color:{fg} !important;}}
 .stApp .aivle-calendar .event-dot {{color:{'#176B94' if st.session_state.ui_theme == '라이트' else '#60C5EE'} !important;}}
 .stApp .aivle-calendar .task-dot {{color:{'#805500' if st.session_state.ui_theme == '라이트' else '#E8C37B'} !important;}}
+
+/* Sidebar: compact navigation and true left alignment, regardless of button internals. */
+[data-testid="stSidebar"] .st-key-aivle_nav button {{
+  display: flex !important;
+  justify-content: flex-start !important;
+  align-items: center !important;
+  text-align: left !important;
+  min-height: 2.6rem !important;
+  height: auto !important;
+  padding: .45rem .75rem !important;
+  gap: .6rem !important;
+}}
+[data-testid="stSidebar"] .st-key-aivle_nav button > div,
+[data-testid="stSidebar"] .st-key-aivle_nav button [data-testid="stMarkdownContainer"] {{
+  width: auto !important;
+  flex: 0 0 auto !important;
+  text-align: left !important;
+  margin: 0 !important;
+  justify-content: flex-start !important;
+}}
+[data-testid="stSidebar"] .st-key-aivle_nav button p {{
+  text-align: left !important;
+  margin: 0 !important;
+  width: auto !important;
+}}
+[data-testid="stSidebar"] .st-key-aivle_nav [data-testid="stVerticalBlock"] {{gap: .16rem !important;}}
+[data-testid="stSidebar"] .st-key-aivle_nav button svg {{flex-shrink:0 !important;}}
+/* Sidebar settings and uploader: avoid dark theme surfaces leaking into light mode. */
+[data-testid="stSidebar"] [data-testid="stExpander"] details,
+[data-testid="stSidebar"] [data-testid="stExpander"] details > summary,
+[data-testid="stSidebar"] [data-testid="stExpander"] details > div,
+[data-testid="stSidebar"] [data-testid="stExpander"] [data-testid="stExpanderDetails"] {{
+  background-color: {side} !important;
+  color: {fg} !important;
+  border-color: {border} !important;
+}}
+[data-testid="stSidebar"] [data-testid="stExpander"] summary:hover {{background-color: {hover_bg} !important;}}
+[data-testid="stSidebar"] [data-testid="stExpander"] summary p,
+[data-testid="stSidebar"] [data-testid="stExpander"] summary svg,
+[data-testid="stSidebar"] [data-testid="stExpander"] summary span {{color: {fg} !important;}}
+[data-testid="stSidebar"] [data-testid="stFileUploader"] section,
+[data-testid="stSidebar"] [data-testid="stFileUploader"] [data-testid="stFileUploaderDropzone"],
+[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] {{
+  background-color: {field_bg} !important;
+  border: 1px dashed {border} !important;
+  color: {fg} !important;
+}}
+[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] button {{
+  background: {side} !important;
+  border: 1px solid {border} !important;
+  color: {fg} !important;
+  width: auto !important;
+}}
+[data-testid="stSidebar"] [data-testid="stFileUploaderDropzone"] *,
+[data-testid="stSidebar"] [data-testid="stFileUploader"] small {{color: {muted} !important;}}
+[data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] label,
+[data-testid="stSidebar"] [data-testid="stRadio"] [role="radiogroup"] p {{color: {fg} !important;}}
 </style>""", unsafe_allow_html=True)
 
 
@@ -252,12 +309,13 @@ with st.sidebar:
     ]
     if 'active_page' not in st.session_state:
         st.session_state.active_page = '회의 통합 분석'
-    for menu_index, (name, icon) in enumerate(menu_icons):
-        if st.button(name, icon=icon,
-                     type='primary' if st.session_state.active_page == name else 'secondary',
-                     key=f'nav_{menu_index}', use_container_width=True):
-            st.session_state.active_page = name
-            st.rerun()
+    with st.container(key='aivle_nav'):
+        for menu_index, (name, icon) in enumerate(menu_icons):
+            if st.button(name, icon=icon,
+                         type='primary' if st.session_state.active_page == name else 'secondary',
+                         key=f'nav_{menu_index}', use_container_width=True):
+                st.session_state.active_page = name
+                st.rerun()
     page = st.session_state.active_page
     st.divider()
     st.caption(f'미완료 업무 {sum(t.get("status") != "완료" for t in st.session_state.tasks)}건 · 저장된 회의 {len(st.session_state.meeting_archive)}건')
