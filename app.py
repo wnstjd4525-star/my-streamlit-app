@@ -77,52 +77,71 @@ st.markdown("""<style>
 .st-key-aivle_fortune_line .aivle-fortune-title {font-size: .78rem; font-weight: 650; margin: 0 0 .25rem; color: var(--primary-color);}
 .st-key-aivle_fortune_line p {font-size: .88rem; text-align:center; margin: 0;}
 @media (max-width: 640px) {.st-key-home_hero {margin-top: 2rem;} .st-key-home_hero .aivle-home-wordmark {font-size:2.65rem !important;}}
-/* High contrast rounded home composer: visible edge around Streamlit/BaseWeb layers. */
+/* Visible rounded Google-style composer, including Streamlit's inner BaseWeb wrapper. */
 .st-key-home_search_row {max-width:740px; margin:0 auto 1.2rem;}
 .st-key-home_search_row [data-testid="stChatInput"],
 .st-key-home_search_row [data-testid="stChatInput"] > div:first-child {
- border:2px solid #69788B !important; border-radius:30px !important;
- background:#fff !important; box-shadow:0 2px 10px rgba(24,41,58,.11) !important;
+   border: 2px solid #69788B !important;
+   border-radius: 30px !important;
+   background-color: #FFFFFF !important;
+   box-shadow: 0 2px 10px rgba(24, 41, 58, .11) !important;
 }
+/* On modern Streamlit, input's outermost BaseWeb wrapper paints over parent borders. */
 .st-key-home_search_row [data-testid="stChatInput"]:has(textarea),
 .st-key-home_search_row [data-testid="stChatInput"] > div:first-child:has(textarea) {
- outline:2px solid #69788B !important; outline-offset:-2px;
+   outline: 2px solid #69788B !important;
+   outline-offset: -2px;
 }
 .st-key-home_search_row [data-testid="stChatInput"]:focus-within,
 .st-key-home_search_row [data-testid="stChatInput"] > div:first-child:focus-within {
- border-color:#138B85 !important;outline-color:#138B85 !important;
- box-shadow:0 0 0 3px rgba(19,139,133,.16) !important;
+   border-color: #138B85 !important;
+   outline-color: #138B85 !important;
+   box-shadow: 0 0 0 3px rgba(19,139,133,.16) !important;
 }
 .st-key-home_search_row [data-testid="stChatInput"] textarea {
- color:#172432 !important;caret-color:#172432 !important;background:transparent !important;
+   color: #172432 !important;
+   caret-color: #172432 !important;
+   background: transparent !important;
 }
-.st-key-home_search_row [data-testid="stChatInput"] textarea::placeholder {color:#536275 !important;opacity:1 !important;}
+.st-key-home_search_row [data-testid="stChatInput"] textarea::placeholder {color: #536275 !important;opacity:1 !important;}
+/* Icon buttons: circular hit targets without visible square frames. */
 .st-key-home_search_row [data-testid="stChatInput"] button,
 .st-key-home_search_row [data-testid="stChatInput"] [role="button"] {
- border:0 !important;border-radius:50% !important;background:transparent !important;
- box-shadow:none !important;color:#172432 !important;opacity:1 !important;
- min-width:36px !important;min-height:36px !important;width:36px !important;height:36px !important;padding:7px !important;
+   background: transparent !important;
+   border: 0 !important;
+   border-radius: 50% !important;
+   box-shadow: none !important;
+   color: #172432 !important;
+   opacity: 1 !important;
+   min-width:36px !important;min-height:36px !important;
+   width:36px !important;height:36px !important;
+   padding: 7px !important;
 }
 .st-key-home_search_row [data-testid="stChatInput"] button:hover:not(:disabled),
-.st-key-home_search_row [data-testid="stChatInput"] [role="button"]:hover {background:#E9EEF2 !important;}
-.st-key-home_search_row [data-testid="stChatInput"] button:focus-visible {
- outline:2px solid #138B85 !important;outline-offset:2px !important;
+.st-key-home_search_row [data-testid="stChatInput"] [role="button"]:hover {
+   background: #E9EEF2 !important;
 }
-.st-key-home_search_row [data-testid="stChatInput"] button:disabled {opacity:.40 !important;}
+.st-key-home_search_row [data-testid="stChatInput"] button:focus-visible,
+.st-key-home_search_row [data-testid="stChatInput"] [role="button"]:focus-visible {
+   outline: 2px solid #138B85 !important;outline-offset: 2px !important;
+}
+.st-key-home_search_row [data-testid="stChatInput"] button:disabled {opacity: .40 !important;}
 .st-key-home_search_row [data-testid="stChatInput"] button svg {width:20px !important;height:20px !important;color:inherit !important;}
-@media (prefers-color-scheme:dark) {
- .st-key-home_search_row [data-testid="stChatInput"],
- .st-key-home_search_row [data-testid="stChatInput"] > div:first-child {background:#20262F !important;border-color:#94A1B2 !important;}
- .st-key-home_search_row [data-testid="stChatInput"]:has(textarea),
- .st-key-home_search_row [data-testid="stChatInput"] > div:first-child:has(textarea) {outline-color:#94A1B2 !important;}
- .st-key-home_search_row [data-testid="stChatInput"] textarea {color:#F2F5F9 !important;caret-color:#F2F5F9 !important;}
- .st-key-home_search_row [data-testid="stChatInput"] textarea::placeholder {color:#B1BDCC !important;}
- .st-key-home_search_row [data-testid="stChatInput"] button,
- .st-key-home_search_row [data-testid="stChatInput"] [role="button"] {color:#F2F5F9 !important;}
- .st-key-home_search_row [data-testid="stChatInput"] button:hover:not(:disabled) {background:#343D49 !important;}
+/* Dark theme works through OS and Streamlit native theme's data attribute. */
+@media (prefers-color-scheme: dark) {
+   .st-key-home_search_row [data-testid="stChatInput"],
+   .st-key-home_search_row [data-testid="stChatInput"] > div:first-child {background-color:#20262F !important;border-color:#94A1B2 !important;}
+   .st-key-home_search_row [data-testid="stChatInput"]:has(textarea),
+   .st-key-home_search_row [data-testid="stChatInput"] > div:first-child:has(textarea) {outline-color:#94A1B2 !important;}
+   .st-key-home_search_row [data-testid="stChatInput"] textarea {color:#F2F5F9 !important;caret-color:#F2F5F9 !important;}
+   .st-key-home_search_row [data-testid="stChatInput"] textarea::placeholder {color:#B1BDCC !important;}
+   .st-key-home_search_row [data-testid="stChatInput"] button,
+   .st-key-home_search_row [data-testid="stChatInput"] [role="button"] {color:#F2F5F9 !important;}
+   .st-key-home_search_row [data-testid="stChatInput"] button:hover:not(:disabled) {background:#343D49 !important;}
 }
+/* A user-selectable Streamlit theme can override OS preference. */
 [data-theme="light"] .st-key-home_search_row [data-testid="stChatInput"],
-[data-theme="light"] .st-key-home_search_row [data-testid="stChatInput"] > div:first-child {background:#fff !important;border-color:#69788B !important;}
+[data-theme="light"] .st-key-home_search_row [data-testid="stChatInput"] > div:first-child {background:#FFFFFF !important;border-color:#69788B !important;}
 [data-theme="dark"] .st-key-home_search_row [data-testid="stChatInput"],
 [data-theme="dark"] .st-key-home_search_row [data-testid="stChatInput"] > div:first-child {background:#20262F !important;border-color:#94A1B2 !important;}
 /* High contrast for navigation icon and border; no global svg fill overrides. */
