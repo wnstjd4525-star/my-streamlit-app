@@ -21,27 +21,25 @@ def get_chain():
     embedding = OpenAIEmbeddings(model="text-embedding-3-small")
 
 
-# GitHub에 저장된 ChromaDB 경로
-source_db = Path(__file__).resolve().parent / "chroma_db"
 
-# 쓰기 가능한 임시 경로로 DB 전체 복사
-temp_db = Path(tempfile.mkdtemp(prefix="chroma_"))
-shutil.copytree(source_db, temp_db, dirs_exist_ok=True)
+    # GitHub에 저장된 ChromaDB 경로
+    source_db = Path(__file__).resolve().parent / "chroma_db"
 
-# 복사한 벡터 저장소 사용
-vectorstore = Chroma(
-    collection_name="ai_ethics",
-    embedding_function=embedding,
-    persist_directory=str(temp_db),
-    create_collection_if_not_exists=False
-)
+    # 쓰기 가능한 임시 경로로 DB 전체 복사
+    temp_db = Path(tempfile.mkdtemp(prefix="chroma_"))
+    shutil.copytree(source_db, temp_db, dirs_exist_ok=True)
 
-# 데이터 확인
-st.write("저장된 청크 수:", vectorstore._collection.count())
+    # 복사한 벡터 저장소 사용
+    vectorstore = Chroma(
+        collection_name="ai_ethics",
+        embedding_function=embedding,
+        persist_directory=str(temp_db),
+        create_collection_if_not_exists=False
+    )
 
+    # 데이터 확인
+    st.write("저장된 청크 수:", vectorstore._collection.count())
 
-    # 검색기 구성
-    retriever = vectorstore.as_retriever()
 
     # 체인 구성
     s_msg = """
