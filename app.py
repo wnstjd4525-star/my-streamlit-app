@@ -20,8 +20,6 @@ def get_chain():
     # Embedding 모델
     embedding = OpenAIEmbeddings(model="text-embedding-3-small")
 
-
-
     # GitHub에 저장된 ChromaDB 경로
     source_db = Path(__file__).resolve().parent / "chroma_db"
 
@@ -40,6 +38,9 @@ def get_chain():
     # 데이터 확인
     st.write("저장된 청크 수:", vectorstore._collection.count())
 
+
+    # 검색기 구성
+    retriever = vectorstore.as_retriever()
 
     # 체인 구성
     s_msg = """
