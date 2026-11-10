@@ -1,0 +1,122 @@
+id,category,user_type,plan,channel,question,answer
+1,Account,Learner,All,All,에듀버스 아카데미 회원가입은 어떻게 하나요?,홈페이지 상단의 회원가입 버튼을 클릭한 후 이메일 인증을 완료하면 가입이 완료됩니다.
+2,Account,Learner,All,All,이메일 인증 메일이 오지 않습니다 어떻게 하나요?,스팸함을 확인하거나 로그인 페이지에서 인증 메일 재발송을 요청하세요.
+3,Account,Learner,All,All,비밀번호를 잊어버렸습니다 어떻게 재설정하나요?,로그인 화면에서 비밀번호 찾기를 클릭하고 이메일로 받은 안내에 따라 재설정하세요.
+4,Account,Learner,All,All,가입한 이메일을 변경할 수 있나요?,계정 설정에서 본인 인증 후 이메일 변경이 가능합니다.
+5,Account,Learner,All,All,계정을 삭제할 수 있나요?,계정 설정의 개인정보 메뉴에서 계정 삭제를 요청할 수 있습니다.
+6,Account,Learner,All,Mobile,소셜 로그인은 지원하나요?,구글 및 마이크로소프트 계정을 통한 로그인을 지원합니다.
+7,Account,Learner,All,All,동시에 몇 개의 기기에서 접속할 수 있나요?,최대 3개의 기기에서 동시 접속이 가능합니다.
+8,Account,Learner,All,All,계정이 잠겼습니다 왜 그런가요?,비밀번호를 5회 이상 잘못 입력하면 보안을 위해 계정이 일시 잠깁니다.
+9,Account,Learner,All,All,프로필 정보를 수정하려면 어떻게 하나요?,프로필 설정 메뉴에서 정보를 수정할 수 있습니다.
+10,Account,Learner,All,All,두 개의 계정을 합칠 수 있나요?,계정 통합은 지원하지 않으며 고객센터로 문의해야 합니다.
+11,Payment,Learner,Free,All,무료 플랜에서는 무엇을 이용할 수 있나요?,무료 플랜에서는 일부 입문 강의만 수강할 수 있습니다.
+12,Payment,Learner,Basic,All,베이직 플랜의 혜택은 무엇인가요?,모든 일반 강의와 학습 자료 다운로드가 가능합니다.
+13,Payment,Learner,Pro,All,프로 플랜은 어떤 점이 추가되나요?,수료증 발급과 우선 고객 지원이 포함됩니다.
+14,Payment,Learner,Enterprise,All,엔터프라이즈 플랜은 무엇인가요?,기업 단위 관리 기능과 학습 분석 대시보드를 제공합니다.
+15,Payment,Learner,All,All,결제 수단은 무엇을 지원하나요?,신용카드 체크카드 페이팔 결제를 지원합니다.
+16,Payment,Learner,All,All,연간 결제가 가능한가요?,연간 결제 시 할인 혜택이 제공됩니다.
+17,Payment,Learner,All,All,결제 정보는 안전한가요?,모든 결제는 암호화된 보안 결제 시스템을 통해 처리됩니다.
+18,Payment,Learner,All,All,결제는 언제 이루어지나요?,구독 신청 즉시 결제가 진행됩니다.
+19,Payment,Learner,All,All,플랜 변경이 가능한가요?,구독 설정에서 상위 또는 하위 플랜으로 변경할 수 있습니다.
+20,Payment,Learner,All,All,학생 할인은 제공되나요?,학생 인증 시 20퍼센트 할인이 적용됩니다.
+21,Refund,Learner,All,All,환불 정책은 어떻게 되나요?,강의 수강률이 20퍼센트 미만이고 구매 후 7일 이내일 경우 환불이 가능합니다.
+22,Refund,Learner,All,All,환불은 어떻게 신청하나요?,주문 내역 페이지에서 환불 요청을 제출하면 됩니다.
+23,Refund,Learner,All,All,환불 처리 기간은 얼마나 걸리나요?,영업일 기준 5일에서 7일 정도 소요됩니다.
+24,Refund,Learner,All,All,수료증 발급 비용도 환불되나요?,수료증 발급 비용은 환불되지 않습니다.
+25,Refund,Learner,All,All,강의를 모두 수강한 후에도 환불이 가능한가요?,수강률이 20퍼센트를 초과하면 환불이 불가능합니다.
+26,Refund,Learner,Enterprise,All,기업 플랜의 환불 정책은 어떻게 되나요?,기업 계약 조건에 따라 별도로 적용됩니다.
+27,Refund,Learner,All,All,강의가 취소되면 어떻게 되나요?,플랫폼 사정으로 취소될 경우 전액 환불됩니다.
+28,Refund,Learner,All,All,부분 환불이 가능한가요?,이용 내역에 따라 부분 환불이 검토될 수 있습니다.
+29,Refund,Learner,All,All,환불 수수료가 있나요?,별도의 환불 수수료는 없습니다.
+30,Refund,Learner,All,All,구독은 언제든지 해지할 수 있나요?,언제든지 해지할 수 있으나 환불은 정책에 따릅니다.
+31,Course,Learner,All,All,강의는 어떻게 신청하나요?,강의 상세 페이지에서 수강 신청 버튼을 클릭하면 됩니다.
+32,Course,Learner,All,All,강의 자료는 다운로드할 수 있나요?,플랜에 따라 다운로드 가능 여부가 다릅니다.
+33,Course,Learner,All,All,강의는 자율 수강 방식인가요?,대부분의 강의는 자율 학습 방식입니다.
+34,Course,Learner,All,All,강의 수강 기간은 어떻게 되나요?,구독 플랜에 따라 수강 기간이 달라집니다.
+35,Course,Learner,Pro,Mobile,모바일에서 오프라인 시청이 가능한가요?,프로 플랜 사용자는 모바일 앱에서 오프라인 저장이 가능합니다.
+36,Course,Learner,All,All,강의는 얼마나 자주 업데이트되나요?,강사는 정기적으로 강의를 업데이트합니다.
+37,Course,Learner,All,All,자막이 제공되나요?,대부분의 강의에 한글 자막이 제공됩니다.
+38,Course,Learner,All,All,여러 강의를 동시에 수강할 수 있나요?,제한 없이 여러 강의를 동시에 수강할 수 있습니다.
+39,Course,Learner,All,All,실습 과제가 포함되어 있나요?,대부분의 강의에 퀴즈와 과제가 포함되어 있습니다.
+40,Course,Learner,All,All,강의를 미리보기 할 수 있나요?,일부 강의는 무료 미리보기 영상이 제공됩니다.
+41,Certificate,Learner,Pro,All,수료증은 어떻게 발급받나요?,모든 강의 요건을 완료하면 수료증을 다운로드할 수 있습니다.
+42,Certificate,Learner,Pro,All,수료증은 공인 인증인가요?,수료증은 학습 완료 증명서이며 국가 공인 자격증은 아닙니다.
+43,Certificate,Learner,Pro,All,수료증 발급 비용이 있나요?,프로 플랜에는 수료증 발급이 포함됩니다.
+44,Certificate,Learner,Pro,All,수료증을 온라인에 공유할 수 있나요?,인증 링크를 통해 온라인 공유가 가능합니다.
+45,Certificate,Learner,Pro,All,기업에서 수료 여부를 확인할 수 있나요?,수료증 ID를 통해 검증이 가능합니다.
+46,Certificate,Learner,Pro,All,강의 종료 후에도 수료증은 유효한가요?,발급된 수료증은 계속 유효합니다.
+47,Certificate,Learner,Pro,All,이름 오기재 시 수정이 가능한가요?,고객센터를 통해 수정 요청이 가능합니다.
+48,Certificate,Learner,Pro,All,수료증은 즉시 발급되나요?,강의 완료 즉시 자동 발급됩니다.
+49,Certificate,Learner,Pro,All,디지털 배지도 제공되나요?,일부 과정은 디지털 배지가 함께 제공됩니다.
+50,Certificate,Learner,Pro,All,출력용 수료증을 받을 수 있나요?,추가 비용으로 인쇄본 신청이 가능합니다.
+51,Enterprise,EnterpriseAdmin,Enterprise,All,기업 계정은 어떻게 등록하나요?,기업 문의 페이지에서 상담 신청 후 계약 체결을 통해 등록할 수 있습니다.
+52,Enterprise,EnterpriseAdmin,Enterprise,All,기업 관리자 계정은 몇 개까지 생성할 수 있나요?,계약 조건에 따라 여러 관리자 계정을 생성할 수 있습니다.
+53,Enterprise,EnterpriseAdmin,Enterprise,All,직원 학습 현황을 확인할 수 있나요?,관리자 대시보드에서 학습 진도와 수료 현황을 확인할 수 있습니다.
+54,Enterprise,EnterpriseAdmin,Enterprise,All,기업 전용 강의를 개설할 수 있나요?,맞춤형 기업 전용 강의 개설이 가능합니다.
+55,Enterprise,EnterpriseAdmin,Enterprise,All,기업 결제 방식은 어떻게 되나요?,기업은 월 단위 또는 연 단위 청구 방식으로 결제할 수 있습니다.
+56,Enterprise,EnterpriseAdmin,Enterprise,All,최소 계약 인원이 있나요?,엔터프라이즈 플랜은 최소 10명 이상부터 계약 가능합니다.
+57,Enterprise,EnterpriseAdmin,Enterprise,All,SSO 연동이 가능한가요?,기업 환경에서는 SSO 연동을 지원합니다.
+58,Enterprise,EnterpriseAdmin,Enterprise,All,기업 전용 지원 채널이 있나요?,엔터프라이즈 고객은 전담 매니저 지원을 받을 수 있습니다.
+59,Enterprise,EnterpriseAdmin,Enterprise,All,학습 데이터는 다운로드할 수 있나요?,관리자는 학습 리포트를 CSV 형식으로 다운로드할 수 있습니다.
+60,Enterprise,EnterpriseAdmin,Enterprise,All,계약 해지는 어떻게 하나요?,계약 기간 종료 30일 전에 해지 의사를 통보해야 합니다.
+61,Technical,Learner,All,Web,영상이 재생되지 않습니다 어떻게 하나요?,브라우저를 최신 버전으로 업데이트하거나 캐시를 삭제해 보세요.
+62,Technical,Learner,All,Mobile,모바일 앱이 실행되지 않습니다 어떻게 하나요?,앱을 최신 버전으로 업데이트하거나 재설치해 보세요.
+63,Technical,Learner,All,All,영상 버퍼링이 심합니다 어떻게 해결하나요?,인터넷 연결 상태를 확인하고 다른 네트워크를 사용해 보세요.
+64,Technical,Learner,All,All,강의 음성이 나오지 않습니다 어떻게 하나요?,기기 음량 설정과 브라우저 권한을 확인하세요.
+65,Technical,Learner,All,All,퀴즈 제출이 되지 않습니다 어떻게 하나요?,페이지를 새로고침한 후 다시 시도해 보세요.
+66,Technical,Learner,All,All,지원하는 브라우저는 무엇인가요?,크롬 엣지 사파리 최신 버전을 권장합니다.
+67,Technical,Learner,All,Mobile,오프라인 저장이 되지 않습니다 왜 그런가요?,프로 플랜 사용자만 오프라인 저장 기능을 사용할 수 있습니다.
+68,Technical,Learner,All,All,비밀번호 변경 후 로그인이 되지 않습니다 어떻게 하나요?,쿠키를 삭제하고 다시 로그인해 보세요.
+69,Technical,Learner,All,All,사이트 접속이 느립니다 왜 그런가요?,일시적인 서버 점검 또는 네트워크 문제일 수 있습니다.
+70,Technical,Learner,All,All,기술 지원은 어떻게 요청하나요?,고객센터 문의하기 메뉴를 통해 지원 요청이 가능합니다.
+71,Security,Learner,All,All,개인정보는 어떻게 보호되나요?,모든 개인정보는 암호화되어 안전하게 저장됩니다.
+72,Security,Learner,All,All,데이터는 어디에 저장되나요?,보안 인증을 받은 클라우드 서버에 저장됩니다.
+73,Security,Learner,All,All,비밀번호는 암호화되나요?,비밀번호는 해시 처리되어 저장됩니다.
+74,Security,Learner,All,All,2단계 인증을 지원하나요?,네 2단계 인증 기능을 제공합니다.
+75,Security,Learner,All,All,계정 해킹이 의심되면 어떻게 하나요?,즉시 비밀번호를 변경하고 고객센터에 신고하세요.
+76,Security,EnterpriseAdmin,Enterprise,All,기업 데이터는 분리 보관되나요?,기업 데이터는 별도의 논리적 공간에 분리 저장됩니다.
+77,Security,Learner,All,All,결제 정보는 저장되나요?,결제 정보는 직접 저장하지 않으며 결제 대행사를 통해 처리됩니다.
+78,Security,Learner,All,All,개인정보 삭제 요청이 가능한가요?,관련 법규에 따라 삭제 요청이 가능합니다.
+79,Security,Learner,All,All,로그인 기록을 확인할 수 있나요?,계정 보안 메뉴에서 최근 로그인 기록을 확인할 수 있습니다.
+80,Security,Learner,All,All,플랫폼은 어떤 보안 인증을 보유하고 있나요?,국제 보안 표준에 따른 보안 체계를 운영하고 있습니다.
+81,Instructor,Instructor,All,All,강사로 등록하려면 어떻게 하나요?,강사 지원 페이지에서 신청서를 제출하면 심사 후 등록됩니다.
+82,Instructor,Instructor,All,All,강의 수익 배분은 어떻게 되나요?,강의 매출의 일정 비율이 강사에게 지급됩니다.
+83,Instructor,Instructor,All,All,강의는 어떻게 업로드하나요?,강사 대시보드에서 강의 영상을 업로드할 수 있습니다.
+84,Instructor,Instructor,All,All,강의 심사 기간은 얼마나 되나요?,제출 후 평균 7일 이내 심사가 완료됩니다.
+85,Instructor,Instructor,All,All,강의 수정이 가능한가요?,강의는 언제든지 수정 및 업데이트할 수 있습니다.
+86,Instructor,Instructor,All,All,수익 정산은 언제 이루어지나요?,매월 말 정산 후 다음 달 초에 지급됩니다.
+87,Instructor,Instructor,All,All,기업 전용 강의 제작이 가능한가요?,기업 요청에 따라 맞춤형 강의 제작이 가능합니다.
+88,Instructor,Instructor,All,All,강의 품질 기준은 무엇인가요?,영상 음질 구성 완성도 등을 기준으로 심사합니다.
+89,Instructor,Instructor,All,All,강사 평가는 어떻게 이루어지나요?,학습자 리뷰와 평점을 기반으로 평가됩니다.
+90,Instructor,Instructor,All,All,강의 삭제가 가능한가요?,삭제 요청 후 내부 검토를 거쳐 처리됩니다.
+91,Policy,Learner,All,All,이용 약관은 어디에서 확인하나요?,웹사이트 하단의 이용 약관 링크에서 확인할 수 있습니다.
+92,Policy,Learner,All,All,콘텐츠 저작권은 누구에게 있나요?,강의 콘텐츠의 저작권은 강사에게 있습니다.
+93,Policy,Learner,All,All,불법 공유 시 어떻게 되나요?,계정 정지 및 법적 조치가 이루어질 수 있습니다.
+94,Policy,Learner,All,All,연령 제한이 있나요?,만 14세 이상부터 가입 가능합니다.
+95,Policy,Learner,All,All,서비스 점검은 언제 진행되나요?,사전 공지를 통해 정기 점검이 진행됩니다.
+96,Policy,Learner,All,All,이용 약관 변경 시 안내되나요?,중요 변경 사항은 이메일로 안내됩니다.
+97,Policy,Learner,All,All,광고 메일 수신을 거부할 수 있나요?,계정 설정에서 수신 거부가 가능합니다.
+98,Policy,Learner,All,All,환불 정책 변경 시 어떻게 되나요?,변경 사항은 공지 후 적용됩니다.
+99,Policy,Learner,All,All,서비스 종료 시 데이터는 어떻게 되나요?,일정 기간 후 데이터가 삭제됩니다.
+100,Policy,Learner,All,All,이용 제한은 어떤 경우 발생하나요?,약관 위반 시 이용이 제한될 수 있습니다.
+101,Course,Learner,All,All,강의 추천은 어떻게 이루어지나요?,학습 이력 기반 추천 알고리즘을 사용합니다.
+102,Course,Learner,All,All,강의 평점은 어떻게 계산되나요?,학습자의 평균 평점으로 계산됩니다.
+103,Course,Learner,All,All,수강 중단 후 재수강이 가능한가요?,구독 기간 내 언제든지 재수강할 수 있습니다.
+104,Course,Learner,All,All,과제 제출 기한이 있나요?,일부 과정은 제출 기한이 설정되어 있습니다.
+105,Course,Learner,All,All,강의 토론 게시판이 있나요?,강의별 커뮤니티 게시판이 제공됩니다.
+106,Course,Learner,All,All,라이브 강의도 제공되나요?,일부 과정은 실시간 라이브 강의를 제공합니다.
+107,Course,Learner,All,All,라이브 강의 녹화본을 볼 수 있나요?,라이브 종료 후 녹화본이 제공됩니다.
+108,Course,Learner,All,All,강의 난이도는 어떻게 표시되나요?,입문 중급 고급 단계로 구분됩니다.
+109,Course,Learner,All,All,강의 언어는 무엇인가요?,대부분 한국어로 제공되며 일부 영어 강의도 있습니다.
+110,Course,Learner,All,All,강의별 예상 수강 시간은 어디서 확인하나요?,강의 상세 페이지에서 확인할 수 있습니다.
+111,Technical,Learner,All,All,플랫폼은 24시간 운영되나요?,네 24시간 언제든지 이용 가능합니다.
+112,Technical,Learner,All,All,모바일과 웹 진도가 연동되나요?,네 모든 기기에서 학습 진도가 동기화됩니다.
+113,Security,Learner,All,All,탈퇴 후 데이터는 얼마나 보관되나요?,관련 법령에 따라 일정 기간 보관 후 삭제됩니다.
+114,Enterprise,EnterpriseAdmin,Enterprise,All,기업 맞춤 보고서를 받을 수 있나요?,관리자 대시보드에서 맞춤 리포트 생성이 가능합니다.
+115,Enterprise,EnterpriseAdmin,Enterprise,All,직원 계정을 일괄 등록할 수 있나요?,CSV 업로드를 통해 일괄 등록이 가능합니다.
+116,Enterprise,EnterpriseAdmin,Enterprise,All,직원 계정 비활성화가 가능한가요?,관리자가 언제든지 계정을 비활성화할 수 있습니다.
+117,Instructor,Instructor,All,All,강사 교육 프로그램이 있나요?,신규 강사를 위한 가이드 프로그램이 제공됩니다.
+118,Policy,Learner,All,All,서비스 이용 중 문의는 어디로 하나요?,고객센터 또는 이메일 문의가 가능합니다.
+119,Security,Learner,All,All,비정상 로그인 감지 시 알림이 오나요?,의심 로그인 발생 시 이메일 알림이 발송됩니다.
+120,Technical,Learner,All,All,API를 제공하나요?,엔터프라이즈 플랜 고객에게 API 접근 권한이 제공됩니다.
+
